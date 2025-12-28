@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'account',
+    'billboards',
+    'campaigns',
 ]
 
 MIDDLEWARE = [
@@ -81,8 +83,12 @@ WSGI_APPLICATION = 'djangoauthapi1.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'billboard_db',
+        'USER': 'postgres',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -203,7 +209,8 @@ SIMPLE_JWT = {
 PASSWORD_RESET_TIMEOUT=900    #900 seconds
 
 
-CORS_ALLOWED_OTIGINS=[
+CORS_ALLOWED_ORIGINS=[
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'http://localhost:5173',
 ]

@@ -4,7 +4,7 @@ from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 
 #Custom User Manager
 class UserManager(BaseUserManager):
-    def create_user(self, email, name, tc, password=None, password2=None):
+    def create_user(self, email, name, tc, password=None,role="business"):
         """
         Creates and saves a User with the given email, name, tc and password.
         """
@@ -15,6 +15,7 @@ class UserManager(BaseUserManager):
             email=self.normalize_email(email),
             name=name,
             tc=tc,
+            role=role,
         )
 
         user.set_password(password)
@@ -32,6 +33,7 @@ class UserManager(BaseUserManager):
             tc=tc,
         )
         user.is_admin = True
+        user.role = "superadmin"
         user.save(using=self._db)
         return user
 
@@ -43,6 +45,16 @@ class User(AbstractBaseUser):
         max_length=255,
         unique=True,
     )
+    
+    ROLE_CHOICES = (
+    ('superadmin', 'Super Admin'),
+    ('admin', 'Admin'),
+    ('business', 'Business Owner'),
+    ('advertiser', 'Advertiser'),
+    )
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="business")
+    
     name = models.CharField(max_length=200)
     tc=models.BooleanField()
     is_active = models.BooleanField(default=True)
@@ -59,11 +71,6 @@ class User(AbstractBaseUser):
     def __str__(self):
         return self.email
 
-    def has_perm(self, perm, obj=None):
-        "Does the user have a specific permission?"
-        # Simplest possible answer: Yes, always
-        return self.is_admin
-
     def has_module_perms(self, app_label):
         "Does the user have permissions to view the app `app_label`?"
         # Simplest possible answer: Yes, always
@@ -71,6 +78,8 @@ class User(AbstractBaseUser):
 
     @property
     def is_staff(self):
-        "Is the user a member of staff?"
-        # Simplest possible answer: All admins are staff
-        return self.is_admin
+        # Superadmins are always staff
+        return self.is_admin or self.role == "superadmin"
+    
+    def has_perm(self, perm, obj=None):
+        return self.is_admin or self.role == "superadmin"

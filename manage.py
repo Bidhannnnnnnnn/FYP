@@ -1,14 +1,11 @@
-#!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
 import os
 import sys
-import dotenv
 
 
 def main():
     """Run administrative tasks."""
     
-    dotenv.read_dotenv()
+    # dotenv.read_dotenv()
     
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'djangoauthapi1.settings')
     try:

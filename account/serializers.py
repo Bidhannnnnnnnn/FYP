@@ -1,6 +1,7 @@
 from xml.dom import ValidationErr
 from rest_framework import serializers
 from account.models import User
+from account.utils import Util
 from django.utils.encoding import smart_str, force_bytes, DjangoUnicodeDecodeError
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -9,11 +10,12 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    
     password2= serializers.CharField(style={'input_type': 'password'}, write_only=True)
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES, required=True)
+
     class Meta:
         model= User
-        fields=['email', 'name', 'password','password2', 'tc']
+        fields=['email', 'name', 'password','password2', 'tc', 'role']
         extra_kwargs={
             'password': {'write_only': True}
         }
@@ -26,8 +28,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Password and Confirm password doesn't match")
         return attrs
 
-    def create(self, validate_data):
-        return User.objects.create_user(**validate_data)
+    def create(self, validated_data):
+        validated_data.pop('password2')
+        return User.objects.create_user(**validated_data)
     
 class UserLoginSerializer(serializers.ModelSerializer):
     email= serializers.EmailField(max_length=255)
@@ -38,7 +41,7 @@ class UserLoginSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields=['id', 'email', 'name']
+        fields=['id', 'email', 'name', 'role']
         
 class UserChangePasswordSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=255, style={'input_type':'password'}, write_only=True)
@@ -73,7 +76,7 @@ class SendPassowrdResetEmailSerializer(serializers.Serializer):
             print('Encoded UID', uid)
             token=PasswordResetTokenGenerator().make_token(user)
             print('Password Reset Token', token)
-            link='http://localhost:3000/api/user/reset/'+uid+'/'+token
+            link='http://localhost:5173/reset-password/'+uid+'/'+token
             print('Password reset link: ', link)
             
             #Send Email
@@ -81,11 +84,10 @@ class SendPassowrdResetEmailSerializer(serializers.Serializer):
             body = 'Click Following link to reset Your Password '+ link
             data={
                 'subject': 'Reset Your Password',
-                'body': 'body',
-                'to_email':user.email,
-                
+                'body': body,
+                'to_email': user.email,
             }
-            
+            Util.send_email(data)
             
             return attrs
                         
@@ -117,5 +119,3 @@ class UserPasswordResetSerializer(serializers.Serializer):
     except DjangoUnicodeDecodeError as identifier:
       PasswordResetTokenGenerator().check_token(user, token)
       raise serializers.ValidationError('Token is not Valid or Expired')
-
-

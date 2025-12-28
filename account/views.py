@@ -1,6 +1,7 @@
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
+from account.permissions import *
 from account.serializers import UserRegistrationSerializer
 from account.serializers import UserLoginSerializer
 from account.serializers import UserProfileSerializer
@@ -12,6 +13,10 @@ from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
+
+permission_classes = [IsAdminUser]
+permission_classes = [IsBusinessUser]
+permission_classes = [IsSuperAdmin]
 
 
 #Generate token Manually
@@ -86,3 +91,34 @@ class UserPasswordResetView(APIView):
     serializer = UserPasswordResetSerializer(data=request.data, context={'uid':uid, 'token':token})
     serializer.is_valid(raise_exception=True)
     return Response({'msg':'Password Reset Successfully'}, status=status.HTTP_200_OK)
+
+
+
+# -----------------------------
+# Example Admin-only view
+# -----------------------------
+class AdminDashboardView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, format=None):
+        return Response({'msg': f'Hello {request.user.name}, welcome to Admin Dashboard!'}, status=status.HTTP_200_OK)
+
+
+# -----------------------------
+# Example Business-only view
+# -----------------------------
+class BusinessDashboardView(APIView):
+    permission_classes = [IsBusinessUser]
+
+    def get(self, request, format=None):
+        return Response({'msg': f'Hello {request.user.name}, welcome to Business Dashboard!'}, status=status.HTTP_200_OK)
+
+
+# -----------------------------
+# Example SuperAdmin-only view
+# -----------------------------
+class SuperAdminDashboardView(APIView):
+    permission_classes = [IsSuperAdmin]
+
+    def get(self, request, format=None):
+        return Response({'msg': f'Hello {request.user.name}, welcome to SuperAdmin Dashboard!'}, status=status.HTTP_200_OK)
