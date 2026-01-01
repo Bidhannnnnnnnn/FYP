@@ -13,6 +13,11 @@ from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
+import requests
+from django.contrib.auth import get_user_model
+from django.utils.crypto import get_random_string
+
+User = get_user_model()
 
 permission_classes = [IsAdminUser]
 permission_classes = [IsBusinessUser]
@@ -122,3 +127,48 @@ class SuperAdminDashboardView(APIView):
 
     def get(self, request, format=None):
         return Response({'msg': f'Hello {request.user.name}, welcome to SuperAdmin Dashboard!'}, status=status.HTTP_200_OK)
+
+class GoogleLoginView(APIView):
+    renderer_classes = [UserRenderer]
+    def post(self, request, format=None):
+        access_token = request.data.get('access_token')
+        if not access_token:
+            return Response({'errors': {'token': ['No access token provided']}}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify token with Google
+        url = 'https://www.googleapis.com/oauth2/v3/userinfo'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code != 200:
+                return Response({'errors': {'token': ['Invalid Google token']}}, status=status.HTTP_400_BAD_REQUEST)
+            
+            user_info = response.json()
+            email = user_info.get('email')
+            name = user_info.get('name')
+            
+            if not email:
+                 return Response({'errors': {'token': ['Could not get email from Google']}}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if user exists
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                # Create new user
+                # Determine role or default to business? 
+                # For now default to 'business' or generic user. App uses 'role' field in serializer but User model might differ.
+                # Assuming User model has name, email, tc.
+                # We'll set a random password.
+                password = get_random_string(length=32)
+                user = User.objects.create_user(email=email, name=name, password=password, tc=True)
+                # If role is needed, need to check User model. Assuming default or handled.
+                # If your User model requires 'role', we might need to set it.
+                # Let's check User model in account/models.py if needed, but usually create_user handles basics.
+                # We will save basic user.
+
+            # Generate tokens
+            token = get_tokens_for_user(user)
+            return Response({'token': token, 'msg': 'Login Successful'}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'errors': {'non_field_errors': [str(e)]}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

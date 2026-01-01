@@ -44,7 +44,7 @@ const Signup = () => {
 
     return (
         <div className="login-page">
-            <div className="login-card" style={{ height: 'auto', minHeight: '850px' }}>
+            <div className="login-card">
                 <div className="header">
                     <h2 className="brand-name">Bimbasetu</h2>
                     <div className="signup-link-container">

@@ -1,26 +1,38 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import api from './services/api';
+import { Link } from 'react-router-dom';
+import api from '../services/api';
 
-const ResetPassword = () => {
+const ChangePassword = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const { id, token } = useParams();
-    const navigate = useNavigate();
+    const [message, setMessage] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setMessage('');
         if (password !== confirmPassword) {
-            alert("Passwords do not match!");
+            setMessage("Passwords do not match!");
             return;
         }
+
+
+        const token = localStorage.getItem('access_token'); // Assuming standard storage
+        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
         try {
-            await api.post(`user/reset-password/${id}/${token}/`, { password, password2: confirmPassword });
-            alert('Password Reset Successful! Please Login with your new password.');
-            navigate('/login');
+            await api.post('user/changepassword/', { password, password2: confirmPassword }, config);
+            setMessage('Password change successful!');
+            setPassword('');
+            setConfirmPassword('');
         } catch (error) {
-            console.error('Password Reset Failed:', error);
-            alert('Failed to reset password. Link may be expired.');
+            console.error('Change Password Failed:', error);
+            let errorMsg = 'Failed to change password.';
+            if (error.response?.data?.errors) {
+                errorMsg = JSON.stringify(error.response.data.errors);
+            } else if (error.response?.data) {
+                errorMsg = JSON.stringify(error.response.data);
+            }
+            setMessage(errorMsg);
         }
     };
 
@@ -32,7 +44,9 @@ const ResetPassword = () => {
                 </div>
 
                 <div className="login-section">
-                    <h1 className="login-title" style={{ fontSize: '36px' }}>New Password</h1>
+                    <h1 className="login-title" style={{ fontSize: '36px' }}>Change Password</h1>
+
+                    {message && <p style={{ color: message.includes('Failed') || message.includes('match') ? 'red' : 'green', textAlign: 'center' }}>{message}</p>}
 
                     <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div className="form-group">
@@ -57,9 +71,11 @@ const ResetPassword = () => {
                             />
                         </div>
 
-                        <button type="submit" className="login-btn">
-                            <span>Reset Password</span>
+                        <button type="submit" className="login-btn" style={{ width: '250px' }}>
+                            <span>Update Password</span>
                         </button>
+
+                        <Link to="/login" style={{ marginTop: '20px', color: 'black', textDecoration: 'none' }}>Back to Home</Link>
                     </form>
                 </div>
             </div>
@@ -67,4 +83,4 @@ const ResetPassword = () => {
     );
 };
 
-export default ResetPassword;
+export default ChangePassword;
