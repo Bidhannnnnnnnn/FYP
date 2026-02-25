@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 from billboards.models import Billboard
 
 User = settings.AUTH_USER_MODEL
@@ -32,6 +33,7 @@ class Booking(models.Model):
     BOOKING_STATUS_CHOICES = (
         ('pending', 'Pending Approval'),
         ('approved', 'Approved'),
+        ('changes_requested', 'Changes Requested'),
         ('rejected', 'Rejected'),
         ('paid', 'Paid'),
         ('active', 'Active'),
@@ -40,6 +42,7 @@ class Booking(models.Model):
     CREATIVE_STATUS_CHOICES = (
         ('pending', 'Pending Review'),
         ('approved', 'Approved'),
+        ('changes_requested', 'Changes Requested'),
         ('rejected', 'Rejected'),
     )
 
@@ -48,6 +51,19 @@ class Booking(models.Model):
     
     start_date = models.DateField()
     end_date = models.DateField()
+    
+    # Dynamic Pricing Factors
+    slot_duration_seconds = models.IntegerField(
+        default=10,
+        validators=[MinValueValidator(5), MaxValueValidator(120)],
+        help_text="Duration in seconds (5-120)"
+    )
+    frequency_per_hour = models.IntegerField(
+        default=10, 
+        validators=[MinValueValidator(1), MaxValueValidator(360)],
+        help_text="Number of times ad is shown per hour"
+    )
+    
     price_calculated = models.DecimalField(max_digits=12, decimal_places=2, help_text="Auto-calculated price")
     
     # Ad Creative
@@ -66,4 +82,26 @@ class Booking(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class BookingSlot(models.Model):
+    """
+    Represents an individual hour booked within a Booking.
+    Allows for granular availability checking and specific daily schedules.
+    """
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='slots')
+    date = models.DateField()
+    hour = models.PositiveSmallIntegerField() # 0-23
+    frequency_per_hour = models.IntegerField(
+        default=10,
+        validators=[MinValueValidator(1), MaxValueValidator(360)],
+        help_text="Custom frequency for this specific hour"
+    )
+    
+    def __str__(self):
+        return f"{self.date} @ {self.hour}:00 for {self.booking}"
+
+    class Meta:
+        unique_together = ('booking', 'date', 'hour')
+        ordering = ['date', 'hour']
  

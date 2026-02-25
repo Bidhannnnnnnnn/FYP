@@ -4,7 +4,10 @@ from rest_framework.response import Response
 from .models import Billboard, OwnerDocument
 from .serializers import BillboardCreateSerializer, BillboardListSerializer, OwnerDocumentSerializer
 from .permissions import IsSuperAdminOrAdmin
-from account.permissions import IsBusinessUser  # For advertiser endpoints
+from account.permissions import IsBusinessUser
+from django.utils import timezone
+from campaigns.models import Booking
+from campaigns.serializers import BillboardPlayerAdSerializer
 
 # Owner creates a billboard
 class BillboardCreateView(generics.CreateAPIView):
@@ -14,8 +17,9 @@ class BillboardCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         # ensure only owners (role 'admin') can create—or allow 'superadmin' for testing
         user = self.request.user
-        if user.role not in ['admin','superadmin']:
-            raise PermissionError("Only billboard owners can add billboards")
+        if user.role not in ['admin', 'superadmin', 'business']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only billboard owners can add billboards")
         serializer.save(owner=user)
 
 # Owner lists their own billboards
@@ -36,6 +40,12 @@ class PublicBillboardListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Billboard.objects.filter(status='approved')
+
+# Single billboard detail
+class BillboardDetailView(generics.RetrieveAPIView):
+    queryset = Billboard.objects.all()
+    serializer_class = BillboardListSerializer
+    permission_classes = [AllowAny]
 
 # Admin approves a billboard
 class ApproveBillboardView(generics.UpdateAPIView):
@@ -65,6 +75,52 @@ class OwnerDocumentCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.role not in ['admin','superadmin']:
-            raise PermissionError("Only owners can upload documents")
+        if user.role not in ['admin', 'superadmin', 'business']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only owners can upload documents")
         serializer.save(owner=user)
+        serializer.save(owner=user)
+
+# Owner updates their billboard
+class BillboardUpdateView(generics.UpdateAPIView):
+    serializer_class = BillboardCreateSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'superadmin':
+            return Billboard.objects.all()
+        return Billboard.objects.filter(owner=user)
+
+# Owner deletes their billboard
+class BillboardDeleteView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'superadmin':
+            return Billboard.objects.all()
+        return Billboard.objects.filter(owner=user)
+
+
+class BillboardActiveAdsView(generics.ListAPIView):
+    """
+    Returns approved bookings for the current date for a specific billboard.
+    Accessible without authentication for public display.
+    """
+    serializer_class = BillboardPlayerAdSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        billboard_id = self.kwargs.get('pk')
+        today = timezone.now().date()
+        return Booking.objects.filter(
+            billboard_id=billboard_id,
+            booking_status='approved',
+            creative_status='approved',
+            start_date__lte=today,
+            end_date__gte=today
+        ).select_related('campaign__advertiser')
+

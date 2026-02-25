@@ -5,13 +5,25 @@ import api from './services/api'; // Import the axios instance
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [loginMessage, setLoginMessage] = useState('');
+
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const response = await api.post('user/login/', { email, password });
             console.log('Login Success:', response.data);
-            alert('Login Successful! Token: ' + response.data.token.access);
+
+            // Store tokens and user info
+            localStorage.setItem('accessToken', response.data.token.access);
+            localStorage.setItem('role', response.data.role);
+            localStorage.setItem('name', response.data.name);
+            localStorage.setItem('showLoginToast', 'true');
+
+            navigate('/dashboard');
+
         } catch (error) {
             console.error('Login Failed:', error);
             alert('Login Failed: ' + (error.response?.data?.errors?.non_field_errors?.[0] || 'Unknown error'));

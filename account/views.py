@@ -2,12 +2,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from account.permissions import *
-from account.serializers import UserRegistrationSerializer
-from account.serializers import UserLoginSerializer
-from account.serializers import UserProfileSerializer
-from account.serializers import UserChangePasswordSerializer
-from account.serializers import SendPassowrdResetEmailSerializer
-from account.serializers import UserPasswordResetSerializer
+from account.serializers import (
+    UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer,
+    UserChangePasswordSerializer, SendPassowrdResetEmailSerializer,
+    UserPasswordResetSerializer, NotificationSerializer
+)
 from django.contrib.auth import authenticate
 from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -16,12 +15,9 @@ from rest_framework.permissions import IsAuthenticated
 import requests
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
+from account.models import User, Notification
 
 User = get_user_model()
-
-permission_classes = [IsAdminUser]
-permission_classes = [IsBusinessUser]
-permission_classes = [IsSuperAdmin]
 
 
 #Generate token Manually
@@ -58,9 +54,14 @@ class UserLoginView(APIView):
             
             if user is not None:
                 token= get_tokens_for_user(user)
-                return Response({'token':token, 'msg':'Login Success'}, status=status.HTTP_200_OK)
+                return Response({
+                    'token': token,
+                    'msg': 'Login Success',
+                    'role': user.role,
+                    'name': user.name
+                }, status=status.HTTP_200_OK)
             else:
-                return Response({'errors':{'non_field_errors':['email or passowrd is not valid']}}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'errors':{'non_field_errors':['Email or password is not valid']}}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class UserProfileView(APIView):
@@ -69,6 +70,13 @@ class UserProfileView(APIView):
     def get(self, request, format=None):
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, format=None):
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserChangePasswordView(APIView):
@@ -128,6 +136,14 @@ class SuperAdminDashboardView(APIView):
     def get(self, request, format=None):
         return Response({'msg': f'Hello {request.user.name}, welcome to SuperAdmin Dashboard!'}, status=status.HTTP_200_OK)
 
+class UserListView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsSuperAdmin]
+    def get(self, request, format=None):
+        users = User.objects.all()
+        serializer = UserProfileSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class GoogleLoginView(APIView):
     renderer_classes = [UserRenderer]
     def post(self, request, format=None):
@@ -168,7 +184,40 @@ class GoogleLoginView(APIView):
 
             # Generate tokens
             token = get_tokens_for_user(user)
-            return Response({'token': token, 'msg': 'Login Successful'}, status=status.HTTP_200_OK)
+            return Response({
+                'token': token,
+                'msg': 'Login Successful',
+                'role': user.role,
+                'name': user.name
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'errors': {'non_field_errors': [str(e)]}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class NotificationListView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        notifications = Notification.objects.filter(recipient=request.user)
+        serializer = NotificationSerializer(notifications, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class NotificationMarkReadView(APIView):
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk=None, format=None):
+        if pk:
+            try:
+                notification = Notification.objects.get(pk=pk, recipient=request.user)
+                notification.is_read = True
+                notification.save()
+                return Response({'msg': 'Notification marked as read'}, status=status.HTTP_200_OK)
+            except Notification.DoesNotExist:
+                return Response({'errors': {'detail': 'Notification not found'}}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+            return Response({'msg': 'All notifications marked as read'}, status=status.HTTP_200_OK)

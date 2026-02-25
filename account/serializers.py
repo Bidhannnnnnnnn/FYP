@@ -1,6 +1,6 @@
 from xml.dom import ValidationErr
 from rest_framework import serializers
-from account.models import User
+from account.models import User, Notification
 from account.utils import Util
 from django.utils.encoding import smart_str, force_bytes, DjangoUnicodeDecodeError
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -42,18 +42,27 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields=['id', 'email', 'name', 'role']
+        extra_kwargs = {
+            'email': {'read_only': True},
+            'role': {'read_only': True}
+        }
         
 class UserChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(max_length=255, style={'input_type':'password'}, write_only=True)
     password = serializers.CharField(max_length=255, style={'input_type':'password'}, write_only=True)
     password2 = serializers.CharField(max_length=255, style={'input_type':'password'}, write_only=True)
     
     class Meta:
-        fields = ['password', 'password2']
+        fields = ['old_password', 'password', 'password2']
         
     def validate(self, attrs):
+        old_password= attrs.get('old_password')
         password= attrs.get('password')
         password2= attrs.get('password2')
         user= self.context.get('user')
+        
+        if not user.check_password(old_password):
+            raise serializers.ValidationError("Old password is not correct.")
         
         if password != password2:
             raise serializers.ValidationError("Password and Confirm password doesn't match")
@@ -117,5 +126,16 @@ class UserPasswordResetSerializer(serializers.Serializer):
       user.save()
       return attrs
     except DjangoUnicodeDecodeError as identifier:
-      PasswordResetTokenGenerator().check_token(user, token)
+      # PasswordResetTokenGenerator().check_token(user, token) # This line is redundant here
       raise serializers.ValidationError('Token is not Valid or Expired')
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    actor_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Notification
+        fields = ['id', 'notification_type', 'message', 'target_id', 'is_read', 'actor_name', 'created_at']
+
+    def get_actor_name(self, obj):
+        return obj.actor.name if obj.actor else "System"

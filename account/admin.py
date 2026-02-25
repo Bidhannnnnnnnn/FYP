@@ -1,5 +1,5 @@
 from django.contrib import admin
-from account.models import User
+from account.models import User, Notification
 
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
@@ -37,3 +37,9 @@ class UserModelAdmin(BaseUserAdmin):
 
 # Now register the new UserModelAdmin...
 admin.site.register(User, UserModelAdmin)
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'recipient', 'notification_type', 'is_read', 'created_at']
+    list_filter = ['notification_type', 'is_read']
+    search_fields = ['recipient__email', 'message']

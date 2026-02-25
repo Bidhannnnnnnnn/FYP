@@ -81,5 +81,29 @@ class User(AbstractBaseUser):
         # Superadmins are always staff
         return self.is_admin or self.role == "superadmin"
     
+    
     def has_perm(self, perm, obj=None):
         return self.is_admin or self.role == "superadmin"
+
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('booking_request', 'New Booking Request'),
+        ('booking_update', 'Booking Status Update'),
+        ('billboard_update', 'Billboard Status Update'),
+        ('system', 'System Message'),
+    )
+
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='triggered_notifications')
+    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES)
+    message = models.TextField()
+    target_id = models.CharField(max_length=255, null=True, blank=True, help_text="ID of the related object (Booking, Billboard, etc.)")
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.notification_type} for {self.recipient.email}"

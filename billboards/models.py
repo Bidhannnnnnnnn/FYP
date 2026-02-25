@@ -12,7 +12,8 @@ class Billboard(models.Model):
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='billboards')
     title = models.CharField(max_length=200)
-    location = models.CharField(max_length=255)        
+    location = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='billboards/', blank=True, null=True)
     size = models.CharField(max_length=64)              # e.g. "20x10"
     display_type = models.CharField(max_length=64, blank=True)  # LED, static
     base_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)

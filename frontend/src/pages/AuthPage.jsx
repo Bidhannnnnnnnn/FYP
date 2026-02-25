@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import api from '../services/api';
+import './AuthPage.css';
 
 const AuthPage = () => {
     const [isLogin, setIsLogin] = useState(true);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    React.useEffect(() => {
+        if (location.pathname === '/signup') {
+            setIsLogin(false);
+        } else if (location.pathname === '/login') {
+            setIsLogin(true);
+        }
+    }, [location.pathname]);
 
     // Login State
     const [loginEmail, setLoginEmail] = useState('');
@@ -26,11 +36,21 @@ const AuthPage = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        // Clear stale token
+        localStorage.removeItem('accessToken');
         try {
             const response = await api.post('user/login/', { email: loginEmail, password: loginPassword });
             console.log('Login Success:', response.data);
-            alert('Login Successful! Token: ' + response.data.token.access);
-            navigate('/dashboard');
+            localStorage.setItem('showLoginToast', 'true');
+            localStorage.setItem('accessToken', response.data.token.access);
+            localStorage.setItem('role', response.data.role);
+            localStorage.setItem('name', response.data.name);
+
+            if (response.data.role === 'superadmin') {
+                navigate('/admin');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (error) {
             console.error('Login Failed:', error);
             alert('Login Failed: ' + (error.response?.data?.errors?.non_field_errors?.[0] || 'Unknown error'));
@@ -68,13 +88,21 @@ const AuthPage = () => {
     };
 
     const handleGoogleSuccess = async (credentialResponse) => {
+        // Clear stale token
+        localStorage.removeItem('accessToken');
         try {
             const response = await api.post('user/google/', { access_token: credentialResponse.credential });
             console.log('Google Login Success:', response.data);
             alert('Google Login Successful!');
-            // Save token logic here if implementing auth context
-            navigate('/dashboard');
-            // Store token or navigate
+            localStorage.setItem('accessToken', response.data.token.access);
+            localStorage.setItem('role', response.data.role || 'business'); // Default to business if no role returned
+            localStorage.setItem('name', response.data.name || 'User');
+
+            if (response.data.role === 'superadmin') {
+                navigate('/admin');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (error) {
             console.error('Google Login Failed:', error);
             alert('Google Login Failed.');
@@ -177,17 +205,32 @@ const AuthPage = () => {
                             <p>Join Bimbasetu today</p>
                         </div>
                         <form onSubmit={handleSignup} className="signup-scroll">
-                            <div className="form-group">
-                                <label>Full Name</label>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder="John Doe"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    required
-                                />
+                            <div className="form-row">
+                                <div className="form-group half">
+                                    <label>Full Name</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="John Doe"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group half">
+                                    <label>User Role</label>
+                                    <select
+                                        className="form-control"
+                                        value={role}
+                                        onChange={(e) => setRole(e.target.value)}
+                                        required
+                                    >
+                                        <option value="business">Billboard Owner</option>
+                                        <option value="advertiser">Advertiser</option>
+                                    </select>
+                                </div>
                             </div>
+
                             <div className="form-group">
                                 <label>Email Address</label>
                                 <input
@@ -198,18 +241,6 @@ const AuthPage = () => {
                                     onChange={(e) => setSignupEmail(e.target.value)}
                                     required
                                 />
-                            </div>
-                            <div className="form-group">
-                                <label>Role</label>
-                                <select
-                                    className="form-control"
-                                    value={role}
-                                    onChange={(e) => setRole(e.target.value)}
-                                    required
-                                >
-                                    <option value="business">Billboard Owner</option>
-                                    <option value="advertiser">Advertiser</option>
-                                </select>
                             </div>
                             <div className="form-row">
                                 <div className="form-group half">

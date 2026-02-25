@@ -6,7 +6,11 @@ from django.conf import settings
 class BillboardCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Billboard
-        fields = ['id','title','location','size','display_type','base_price','visibility_score','traffic_density']
+        fields = [
+            'id','title','location','image','size','display_type',
+            'base_price','visibility_score','traffic_density',
+            'description','latitude','longitude'
+        ]
 
     def create(self, validated_data):
         user = self.context['request'].user
@@ -18,7 +22,11 @@ class BillboardListSerializer(serializers.ModelSerializer):
     owner = UserProfileSerializer(read_only=True)
     class Meta:
         model = Billboard
-        fields = ['id','title','location','size','display_type','base_price','visibility_score','traffic_density','status','owner']
+        fields = [
+            'id','title','location','image','size','display_type',
+            'base_price','visibility_score','traffic_density','status','owner',
+            'description','latitude','longitude'
+        ]
 
 
 class OwnerDocumentSerializer(serializers.ModelSerializer):
