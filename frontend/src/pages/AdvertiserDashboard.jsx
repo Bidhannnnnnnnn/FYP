@@ -5,9 +5,11 @@ import './AdvertiserDashboard.css';
 
 import BookingModal from './BookingModal';
 import NotificationBell from '../components/Notifications/NotificationBell';
-import BookingDetailsModal from '../components/Bookings/BookingDetailsModal';
 import Profile from './Profile';
 import Billing from './Billing';
+import BillboardDetails from './BillboardDetails';
+import BillboardBooking from './BillboardBooking';
+import BookingDetailsView from './BookingDetailsView';
 
 const AdvertiserDashboard = () => {
     const navigate = useNavigate();
@@ -21,6 +23,9 @@ const AdvertiserDashboard = () => {
         if (path.includes('/explore')) return 'explore';
         if (path.includes('/profile')) return 'profile';
         if (path.includes('/billing')) return 'billing';
+        if (path.match(/^\/billboard\/\d+\/book$/)) return 'billboardBooking';
+        if (path.match(/^\/billboard\/\d+$/)) return 'billboardDetails';
+        if (path.match(/^\/booking\/\d+$/)) return 'bookingDetails';
         return 'dashboard';
     };
 
@@ -41,14 +46,10 @@ const AdvertiserDashboard = () => {
     });
     const [loading, setLoading] = useState(true);
 
-    // Edit/Revamp Modal State
-    const [editModal, setEditModal] = useState({ show: false, billboard: null, bookingData: null });
-
+    // UI State
     const [selectedBillboard, setSelectedBillboard] = useState(null);
+    const [editModal, setEditModal] = useState({ show: false, billboard: null });
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-    // Detail Modal State
-    const [selectedBookingForDetail, setSelectedBookingForDetail] = useState(null);
 
     // Toast State
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -339,7 +340,7 @@ const AdvertiserDashboard = () => {
                                 key={booking.id}
                                 style={{ borderBottom: '1px solid #F9FAFB', transition: 'background 0.2s', cursor: 'pointer' }}
                                 className="table-row-hover"
-                                onClick={() => setSelectedBookingForDetail(booking)}
+                                onClick={() => navigate(`/booking/${booking.id}`)}
                             >
                                 <td style={{ padding: '20px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -580,6 +581,9 @@ const AdvertiserDashboard = () => {
                         {activeTab === 'bookings' && <MyAds />}
                         {activeTab === 'profile' && <Profile />}
                         {activeTab === 'billing' && <Billing />}
+                        {activeTab === 'billboardDetails' && <BillboardDetails />}
+                        {activeTab === 'billboardBooking' && <BillboardBooking />}
+                        {activeTab === 'bookingDetails' && <BookingDetailsView />}
                     </>
                 )}
             </div>
@@ -634,13 +638,6 @@ const AdvertiserDashboard = () => {
                         </div>
                     </div>
                 </div>
-            )}
-            {/* Booking Details Modal */}
-            {selectedBookingForDetail && (
-                <BookingDetailsModal
-                    booking={selectedBookingForDetail}
-                    onClose={() => setSelectedBookingForDetail(null)}
-                />
             )}
 
             <style>{`

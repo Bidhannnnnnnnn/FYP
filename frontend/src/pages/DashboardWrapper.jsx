@@ -56,6 +56,11 @@ const DashboardWrapper = () => {
             return;
         }
 
+        // Allow standalone billboard and booking paths to bypass the strict /owner and /advertiser checks
+        if (path.startsWith('/billboard') || path.startsWith('/booking')) {
+            return;
+        }
+
         // Ensure users are on the correct portal
         if ((path.startsWith('/owner') || path === '/owner/profile') && role !== 'business' && role !== 'admin') {
             navigate('/advertiser/explore', { replace: true });
@@ -73,6 +78,13 @@ const DashboardWrapper = () => {
         return <OwnerDashboard />;
     } else if (path.startsWith('/advertiser')) {
         return <AdvertiserDashboard />;
+    } else if (path.startsWith('/billboard') || path.startsWith('/booking')) {
+        // Direct billboard/booking links render the dashboard corresponding to the user's role
+        if (role === 'business' || role === 'admin') {
+            return <OwnerDashboard />;
+        } else {
+            return <AdvertiserDashboard />;
+        }
     }
 
     // Fallback (should not reach here due to redirects)

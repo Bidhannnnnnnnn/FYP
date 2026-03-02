@@ -5,9 +5,11 @@ import './AdvertiserDashboard.css'; // Reuse existing styles
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import NotificationBell from '../components/Notifications/NotificationBell';
 import './OwnerDashboard.css';
-import BookingDetailsModal from '../components/Bookings/BookingDetailsModal';
-import Profile from './Profile';
-import Billing from './Billing';
+import BillboardDetails from './BillboardDetails';
+import BillboardBooking from './BillboardBooking';
+import BillboardManage from './BillboardManage';
+import BillboardPlayer from './BillboardPlayer';
+import BookingDetailsView from './BookingDetailsView';
 
 const OccupancyAnalytics = ({ myBillboards = [] }) => {
     const [period, setPeriod] = useState('daily');
@@ -156,13 +158,17 @@ const OwnerDashboard = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Determine active tab from URL
     const getActiveTab = () => {
         const path = location.pathname;
         if (path.includes('/requests')) return 'requests';
         if (path.includes('/billboards')) return 'billboards';
         if (path.includes('/profile')) return 'profile';
         if (path.includes('/billing')) return 'billing';
+        if (path.match(/^\/billboard-manage\/\d+$/)) return 'billboardManage';
+        if (path.match(/^\/billboard\/\d+\/player$/)) return 'billboardPlayer';
+        if (path.match(/^\/billboard\/\d+\/book$/)) return 'billboardBooking';
+        if (path.match(/^\/billboard\/\d+$/)) return 'billboardDetails';
+        if (path.match(/^\/booking\/\d+$/)) return 'bookingDetails';
         return 'dashboard'; // default to analytics/dashboard
     };
 
@@ -206,9 +212,6 @@ const OwnerDashboard = () => {
 
     // Toast State
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-
-    // Booking Details State
-    const [selectedBookingForDetail, setSelectedBookingForDetail] = useState(null);
 
     useEffect(() => {
         // Check for login toast flag from AuthPage/Login
@@ -557,7 +560,7 @@ const OwnerDashboard = () => {
                         {activeTab === 'requests' && <BookingRequests
                             ownerBookings={ownerBookings}
                             openActionModal={openActionModal}
-                            setSelectedBookingForDetail={setSelectedBookingForDetail}
+                            navigate={navigate}
                         />}
                         {activeTab === 'billboards' && <MyBillboards
                             myBillboards={myBillboards}
@@ -568,6 +571,11 @@ const OwnerDashboard = () => {
                         />}
                         {activeTab === 'profile' && <Profile />}
                         {activeTab === 'billing' && <Billing />}
+                        {activeTab === 'billboardDetails' && <BillboardDetails />}
+                        {activeTab === 'billboardBooking' && <BillboardBooking />}
+                        {activeTab === 'billboardManage' && <BillboardManage />}
+                        {activeTab === 'billboardPlayer' && <BillboardPlayer />}
+                        {activeTab === 'bookingDetails' && <BookingDetailsView />}
                     </>
                 )}
             </div>
@@ -808,13 +816,6 @@ const OwnerDashboard = () => {
                     </div>
                 </div>
             )}
-            {/* Booking Details Modal */}
-            {selectedBookingForDetail && (
-                <BookingDetailsModal
-                    booking={selectedBookingForDetail}
-                    onClose={() => setSelectedBookingForDetail(null)}
-                />
-            )}
         </div>
     );
 };
@@ -883,7 +884,7 @@ const DashboardHome = ({ user, stats, myBillboards, navigate, getInitials }) => 
     </>
 );
 
-const BookingRequests = ({ ownerBookings, openActionModal, setSelectedBookingForDetail }) => (
+const BookingRequests = ({ ownerBookings, openActionModal, navigate }) => (
     <div className="view-container">
         <h3>Booking Requests</h3>
         <table style={{ width: '100%', marginTop: '20px', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
@@ -905,7 +906,7 @@ const BookingRequests = ({ ownerBookings, openActionModal, setSelectedBookingFor
                         key={booking.id}
                         style={{ background: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', cursor: 'pointer' }}
                         className="table-row-hover"
-                        onClick={() => setSelectedBookingForDetail(booking)}
+                        onClick={() => navigate(`/booking/${booking.id}`)}
                     >
                         <td style={{ padding: '16px' }}>{booking.campaign_name || 'Campaign #' + booking.campaign}</td>
                         <td style={{ padding: '16px' }}>{booking.billboard_details?.title || 'Billboard #' + booking.billboard}</td>

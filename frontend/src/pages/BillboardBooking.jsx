@@ -277,8 +277,8 @@ const BillboardBooking = () => {
     const totalHours = formattedSlots.reduce((acc, curr) => acc + curr.hours.length, 0);
 
     return (
-        <div className="booking-page-container" style={{ minHeight: '100vh', background: '#f4f7f5', padding: '40px 20px' }}>
-            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="view-container">
+            <div>
 
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>

@@ -1,0 +1,260 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import api from '../services/api';
+
+const TIME_LABELS = Array.from({ length: 24 }).map((_, i) =>
+    `${i.toString().padStart(2, '0')}:00`
+);
+
+const getVisibilityColor = (hour) => {
+    if (hour >= 8 && hour <= 20) return '#FEF3C7'; // Peak
+    if (hour >= 6 && hour <= 23) return '#E0F2FE'; // Mid
+    return '#F3F4F6'; // Low
+};
+
+const BookingDetailsView = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [booking, setBooking] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchBooking = async () => {
+            try {
+                // Try to find the booking from advertiser endpoint
+                let found = null;
+                try {
+                    const res = await api.get('campaigns/bookings/');
+                    found = res.data.find(b => b.id === parseInt(id));
+                } catch (e) {
+                    console.log("Advertiser check failed, moving to owner");
+                }
+
+                if (found) {
+                    setBooking(found);
+                } else {
+                    // Try owner endpoint if advertiser fetch didn't yield the booking
+                    const resOwner = await api.get('campaigns/owner-bookings/');
+                    const foundOwner = resOwner.data.find(b => b.id === parseInt(id));
+                    setBooking(foundOwner || null);
+                }
+            } catch (error) {
+                console.error("Failed to fetch booking details", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchBooking();
+    }, [id]);
+
+    // Reconstruct selected slots for easy lookup in heatmap
+    const slotMap = useMemo(() => {
+        if (!booking || !booking.slots) return {};
+        const map = {};
+        booking.slots.forEach(s => {
+            if (!map[s.date]) map[s.date] = {};
+            map[s.date][s.hour] = s.frequency_per_hour;
+        });
+        return map;
+    }, [booking?.slots]);
+
+    const dateRange = useMemo(() => {
+        if (!booking || !booking.start_date || !booking.end_date) return [];
+        const dates = [];
+        let curr = new Date(booking.start_date);
+        const end = new Date(booking.end_date);
+        while (curr <= end) {
+            dates.push(curr.toISOString().split('T')[0]);
+            curr.setDate(curr.getDate() + 1);
+        }
+        return dates;
+    }, [booking?.start_date, booking?.end_date]);
+
+    if (loading) return <div className="view-container">Loading booking details...</div>;
+    if (!booking) return (
+        <div className="view-container">
+            <button onClick={() => navigate(-1)} className="btn-secondary" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', width: 'fit-content' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Back
+            </button>
+            <p>Booking not found. You might not have permission to view this.</p>
+        </div>
+    );
+
+    const {
+        billboard_details,
+        campaign_name,
+        advertiser_email,
+        start_date,
+        end_date,
+        price_calculated,
+        slot_duration_seconds,
+        frequency_per_hour,
+        booking_status,
+        owner_remarks,
+        creative_file
+    } = booking;
+
+    const isVideo = creative_file?.match(/\.(mp4|webm|ogg|mov|m4v|avi|mkv)$/i);
+
+    return (
+        <div className="view-container">
+            <button onClick={() => navigate(-1)} className="btn-secondary" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', width: 'fit-content', background: 'transparent', border: '1px solid #E5E7EB', color: '#374151' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Back
+            </button>
+
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '40px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', border: '1px solid #F3F4F6' }}>
+
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px', paddingBottom: '30px', borderBottom: '1px solid #E5E7EB' }}>
+                    <div>
+                        <span style={{
+                            padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold',
+                            background: booking_status === 'approved' ? '#DEF7EC' : (booking_status === 'rejected' ? '#FDE8E8' : '#FEF3C7'),
+                            color: booking_status === 'approved' ? '#03543F' : (booking_status === 'rejected' ? '#9B1C1C' : '#92400E'),
+                            textTransform: 'uppercase', marginBottom: '16px', display: 'inline-block'
+                        }}>
+                            {booking_status.replace('_', ' ')}
+                        </span>
+                        <h2 style={{ margin: 0, fontSize: '32px', color: '#111827', fontWeight: '800' }}>{campaign_name || `Booking #${booking.id}`}</h2>
+                        <p style={{ margin: '8px 0 0 0', color: '#6B7280', fontSize: '16px' }}>at {billboard_details?.title}, {billboard_details?.location}</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '32px', fontWeight: '800', color: '#10B981' }}>NRs. {price_calculated}</div>
+                        <div style={{ fontSize: '14px', color: '#9CA3AF', marginTop: '4px' }}>Total Price Quoted</div>
+                    </div>
+                </div>
+
+                {/* Main Content Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: '40px', marginBottom: '40px' }}>
+                    {/* Left Col: Specs */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+
+                        {/* Engagement Details */}
+                        <div style={{ background: '#F9FAFB', padding: '30px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
+                            <h4 style={{ marginTop: 0, marginBottom: '24px', fontSize: '18px', fontWeight: '700', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                Engagement Details
+                            </h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                <div>
+                                    <label style={{ fontSize: '13px', color: '#6B7280', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.05em' }}>Duration</label>
+                                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', marginTop: '4px' }}>{start_date} to {end_date}</div>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '13px', color: '#6B7280', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.05em' }}>Configuration</label>
+                                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', marginTop: '4px' }}>{slot_duration_seconds}s @ {frequency_per_hour}x /hr</div>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '13px', color: '#6B7280', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.05em' }}>Advertiser</label>
+                                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', marginTop: '4px' }}>{advertiser_email}</div>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '13px', color: '#6B7280', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.05em' }}>Billboard Display</label>
+                                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', marginTop: '4px' }}>{billboard_details?.display_type || 'Digital'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Owner Remarks */}
+                        {owner_remarks && (
+                            <div style={{ background: '#F0FDF4', padding: '24px', borderRadius: '20px', border: '1px solid #DCFCE7' }}>
+                                <h4 style={{ marginTop: 0, marginBottom: '12px', fontSize: '16px', fontWeight: '700', color: '#166534', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                    Owner/System Remarks
+                                </h4>
+                                <p style={{ fontSize: '15px', color: '#166534', margin: 0, lineHeight: '1.5' }}>
+                                    {owner_remarks}
+                                </p>
+                            </div>
+                        )}
+
+                    </div>
+
+                    {/* Right Col: Creative File */}
+                    <div style={{ background: '#000', borderRadius: '20px', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                        {creative_file ? (
+                            isVideo ? (
+                                <video src={creative_file} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'contain', maxHeight: '500px' }} />
+                            ) : (
+                                <img src={creative_file} alt="Ad Creative" style={{ width: '100%', height: '100%', objectFit: 'contain', maxHeight: '500px' }} />
+                            )
+                        ) : (
+                            <div style={{ color: '#6B7280', textAlign: 'center', padding: '40px' }}>
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '16px', opacity: 0.5 }}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                <div>No creative asset uploaded</div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Heatmap Section */}
+                <div>
+                    <h4 style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '700', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        Schedule Heatmap
+                    </h4>
+                    <div style={{ overflowX: 'auto', paddingBottom: '15px', background: '#fff', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '24px' }}>
+                        <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '120px' }}></th>
+                                    {TIME_LABELS.map((label, i) => (
+                                        <th key={i} style={{ fontSize: '10px', color: '#6B7280', paddingBottom: '12px', minWidth: '35px', fontWeight: '500' }}>{label}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {dateRange.map(date => (
+                                    <tr key={date}>
+                                        <td style={{ fontSize: '13px', fontWeight: '600', color: '#374151', padding: '10px 16px 10px 0', whiteSpace: 'nowrap' }}>
+                                            {new Date(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        </td>
+                                        {Array.from({ length: 24 }).map((_, hour) => {
+                                            const freq = slotMap[date]?.[hour];
+                                            const isSelected = freq !== undefined;
+                                            return (
+                                                <td
+                                                    key={hour}
+                                                    style={{
+                                                        height: '32px',
+                                                        borderRadius: '4px',
+                                                        border: isSelected ? '1px solid #374151' : '1px solid #F3F4F6',
+                                                        background: isSelected ? '#3B82F6' : getVisibilityColor(hour),
+                                                        opacity: isSelected ? 1 : 0.4,
+                                                        padding: 0,
+                                                        transition: 'all 0.2s',
+                                                        cursor: isSelected ? 'pointer' : 'default'
+                                                    }}
+                                                    title={date + " " + TIME_LABELS[hour] + (isSelected ? ": " + freq + "x Frequency" : "")}
+                                                >
+                                                    {isSelected && (
+                                                        <div style={{ color: '#fff', fontSize: '10px', fontWeight: 'bold', textAlign: 'center' }}>
+                                                            {freq}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        <div style={{ display: 'flex', gap: '20px', marginTop: '20px', fontSize: '12px', color: '#6B7280', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ width: '12px', height: '12px', background: '#3B82F6', borderRadius: '2px' }}></div>
+                                Active Slot (Frequency)
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ width: '12px', height: '12px', background: '#FEF3C7', borderRadius: '2px' }}></div>
+                                Peak Hours (8am-8pm)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div >
+    );
+};
+
+export default BookingDetailsView;

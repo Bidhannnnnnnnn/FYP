@@ -119,12 +119,12 @@ const BillboardManage = () => {
     const pendingBookings = bookings.filter(b => b.booking_status === 'pending');
 
     return (
-        <div className="dashboard-container" style={{ flexDirection: 'column', height: 'auto', minHeight: '100vh' }}>
+        <div className="view-container">
             {/* Top Bar */}
-            <div style={{ background: '#fff', padding: '15px 40px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+            <div style={{ background: '#fff', padding: '15px 0', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '30px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <button
-                        onClick={handleBack}
+                        onClick={() => navigate(-1)}
                         style={{ background: 'transparent', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: '#374151', fontWeight: 600, fontSize: '14px' }}
                     >
                         <span>←</span> Back
@@ -154,8 +154,8 @@ const BillboardManage = () => {
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="main-content" style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+            {/* Main Content Area */}
+            <div style={{ width: '100%' }}>
 
                 {/* Hero / Overview Section */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: '30px', marginBottom: '40px' }}>

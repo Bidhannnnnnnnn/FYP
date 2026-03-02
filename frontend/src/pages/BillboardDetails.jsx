@@ -30,9 +30,10 @@ const BillboardDetails = () => {
     if (!billboard) return null;
 
     return (
-        <div className="billboard-details-page" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <button onClick={() => navigate('/dashboard')} style={{ marginBottom: '20px', cursor: 'pointer', background: 'none', border: 'none', color: '#666' }}>
-                ← Back to Dashboard
+        <div className="view-container">
+            <button onClick={() => navigate(-1)} style={{ marginBottom: '20px', cursor: 'pointer', background: 'none', border: 'none', color: '#667B68', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Back
             </button>
 
             <div className="details-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '40px' }}>

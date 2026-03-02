@@ -12,11 +12,8 @@ import AdminBillboards from './components/Admin/Billboards';
 import AdminUsers from './components/Admin/Users';
 import AdminBookings from './components/Admin/Bookings';
 import ProtectedRoute from './components/ProtectedRoute';
-import BillboardDetails from './pages/BillboardDetails';
-import BillboardManage from './pages/BillboardManage';
 import DashboardWrapper from './pages/DashboardWrapper';
 import BillboardPlayer from './pages/BillboardPlayer';
-import BillboardBooking from './pages/BillboardBooking';
 import LandingPage from './pages/LandingPage';
 import Billing from './pages/Billing';
 
@@ -50,10 +47,14 @@ function App() {
         {/* Legacy redirect */}
         <Route path="/dashboard" element={<DashboardWrapper />} />
 
-        <Route path="/billboard/:id" element={<BillboardDetails />} />
-        <Route path="/billboard-manage/:id" element={<BillboardManage />} />
+        {/* Standalone pages now embedded in DashboardWrapper */}
+        <Route path="/billboard/:id" element={<DashboardWrapper />} />
+        <Route path="/billboard-manage/:id" element={<DashboardWrapper />} />
+        <Route path="/billboard/:id/book" element={<DashboardWrapper />} />
+        <Route path="/booking/:id" element={<DashboardWrapper />} />
+
+        {/* Billboard Player is typically full-screen for physical displays */}
         <Route path="/billboard/:id/player" element={<BillboardPlayer />} />
-        <Route path="/billboard/:id/book" element={<BillboardBooking />} />
 
         {/* Admin Routes */}
         <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>
