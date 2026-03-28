@@ -5,6 +5,8 @@ from django.utils.encoding import smart_str, force_bytes, DjangoUnicodeDecodeErr
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.crypto import get_random_string
+from django.core.cache import cache
+import random
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -78,19 +80,17 @@ class SendPassowrdResetEmailSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = attrs.get('email')
         if User.objects.filter(email=email).exists():
-            user= User.objects.get(email = email)
-            uid= urlsafe_base64_encode(force_bytes(user.id))
-            print('Encoded UID', uid)
-            token=PasswordResetTokenGenerator().make_token(user)
-            print('Password Reset Token', token)
-            link='http://localhost:5173/reset-password/'+uid+'/'+token
-            print('Password reset link: ', link)
+            user = User.objects.get(email=email)
+            otp = str(random.randint(100000, 999999))
             
-            #Send Email
+            # Save OTP to cache for 15 minutes (900 seconds)
+            cache.set(f"password_reset_otp_{user.email}", otp, timeout=900)
+            print('Password reset OTP generated: ', otp)
             
-            body = 'Click Following link to reset Your Password '+ link
-            data={
-                'subject': 'Reset Your Password',
+            # Send Email
+            body = f'Your Bimbasetu Password Reset OTP is: {otp}\n\nThis verification code will expire securely in 15 minutes.'
+            data = {
+                'subject': 'Reset Your Password (OTP)',
                 'body': body,
                 'to_email': user.email,
             }
@@ -102,31 +102,57 @@ class SendPassowrdResetEmailSerializer(serializers.Serializer):
             raise serializers.ValidationError('You are not a registered User')
         
         
-class UserPasswordResetSerializer(serializers.Serializer):
-  password = serializers.CharField(max_length=255, style={'input_type':'password'}, write_only=True)
-  password2 = serializers.CharField(max_length=255, style={'input_type':'password'}, write_only=True)
-  class Meta:
-    fields = ['password', 'password2']
+class VerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=255)
+    otp = serializers.CharField(max_length=6)
 
-  def validate(self, attrs):
-    try:
-      password = attrs.get('password')
-      password2 = attrs.get('password2')
-      uid = self.context.get('uid')
-      token = self.context.get('token')
-      if password != password2:
-        raise serializers.ValidationError("Password and Confirm Password doesn't match")
-      id = smart_str(urlsafe_base64_decode(uid))
-      user = User.objects.get(id=id)
-      if not PasswordResetTokenGenerator().check_token(user, token):
-        raise serializers.ValidationError('Token is not Valid or Expired')
-      user.set_password(password)
-      user.is_active = True
-      user.save()
-      return attrs
-    except DjangoUnicodeDecodeError as identifier:
-      # PasswordResetTokenGenerator().check_token(user, token) # This line is redundant here
-      raise serializers.ValidationError('Token is not Valid or Expired')
+    def validate(self, attrs):
+        email = attrs.get('email')
+        otp = attrs.get('otp')
+        
+        cached_otp = cache.get(f"password_reset_otp_{email}")
+        
+        if not cached_otp or str(cached_otp) != str(otp):
+            raise serializers.ValidationError('OTP is Invalid or Expired')
+            
+        return attrs
+
+
+class UserPasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=255)
+    otp = serializers.CharField(max_length=6)
+    password = serializers.CharField(max_length=255, style={'input_type':'password'}, write_only=True)
+    password2 = serializers.CharField(max_length=255, style={'input_type':'password'}, write_only=True)
+    
+    class Meta:
+        fields = ['email', 'otp', 'password', 'password2']
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        otp = attrs.get('otp')
+        password = attrs.get('password')
+        password2 = attrs.get('password2')
+        
+        if password != password2:
+            raise serializers.ValidationError("Password and Confirm Password don't match")
+            
+        cached_otp = cache.get(f"password_reset_otp_{email}")
+        
+        if not cached_otp or str(cached_otp) != str(otp):
+            raise serializers.ValidationError('OTP is Invalid or Expired')
+            
+        try:
+            user = User.objects.get(email=email)
+            user.set_password(password)
+            user.is_active = True
+            user.save()
+            
+            # Delete OTP from cache so it can't be reused
+            cache.delete(f"password_reset_otp_{email}")
+            
+            return attrs
+        except User.DoesNotExist:
+            raise serializers.ValidationError('You are not a registered User')
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -166,14 +192,14 @@ class UserSignupInviteSerializer(serializers.Serializer):
         user.is_active = False
         user.save()
 
-        # Generate Token for Password Set (Signup Verification)
-        uid = urlsafe_base64_encode(force_bytes(user.id))
-        token = PasswordResetTokenGenerator().make_token(user)
-        # Use existing frontend reset-password route
-        link = f'http://localhost:5173/reset-password/{uid}/{token}'
+        # Generate OTP for Password Set (Signup Verification)
+        otp = str(random.randint(100000, 999999))
+        cache.set(f"password_reset_otp_{user.email}", otp, timeout=86400) # 24 hour expiry
+        
+        link = 'http://localhost:5173/reset-password'
         
         # Send Email
-        body = f'Hi {name},\n\nWelcome to Bimbasetu! Please click the following link to set your password and complete your registration:\n\n{link}'
+        body = f'Hi {name},\n\nWelcome to Bimbasetu!\nYour account has been pre-registered securely.\n\nPlease navigate to {link} and use the following verification OTP code to set up your password:\n\nOTP: {otp}\n\nThis verification code expires in 24 hours.'
         data = {
             'subject': 'Complete Your Bimbasetu Registration',
             'body': body,

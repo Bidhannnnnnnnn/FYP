@@ -5,7 +5,7 @@ from account.permissions import *
 from account.serializers import (
     UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer,
     UserChangePasswordSerializer, SendPassowrdResetEmailSerializer,
-    UserPasswordResetSerializer, NotificationSerializer, UserSignupInviteSerializer
+    VerifyOTPSerializer, UserPasswordResetSerializer, NotificationSerializer, UserSignupInviteSerializer
 )
 from django.contrib.auth import authenticate
 from account.renderers import UserRenderer
@@ -106,10 +106,19 @@ class UserSignupInviteView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class VerifyOTPView(APIView):
+    renderer_classes = [UserRenderer]
+
+    def post(self, request, format=None):
+        serializer = VerifyOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({'msg': 'OTP Verified Successfully'}, status=status.HTTP_200_OK)
+
+
 class UserPasswordResetView(APIView):
   renderer_classes = [UserRenderer]
-  def post(self, request, uid, token, format=None):
-    serializer = UserPasswordResetSerializer(data=request.data, context={'uid':uid, 'token':token})
+  def post(self, request, format=None):
+    serializer = UserPasswordResetSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     return Response({'msg':'Password Reset Successfully'}, status=status.HTTP_200_OK)
 

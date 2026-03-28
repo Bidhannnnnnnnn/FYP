@@ -1,7 +1,7 @@
 from django.urls import path, include
 from account.views import (
     UserRegistrationView, UserLoginView, UserProfileView, UserChangePasswordView,
-    SendPasswordResetEmailView, UserPasswordResetView, UserListView, GoogleLoginView,
+    SendPasswordResetEmailView, VerifyOTPView, UserPasswordResetView, UserListView, GoogleLoginView,
     NotificationListView, NotificationMarkReadView, UserManageDetailView, UserSignupInviteView
 )
 
@@ -30,8 +30,11 @@ urlpatterns = [
     path('user-manage/<int:pk>/', UserManageDetailView.as_view(),
     name='user-manage'),
     
-    path('reset-password/<uid>/<token>/', UserPasswordResetView.as_view(),
+    path('reset-password/', UserPasswordResetView.as_view(),
     name='reset-password'),
+    
+    path('verify-otp/', VerifyOTPView.as_view(),
+    name='verify-otp'),
 
     path('notifications/', NotificationListView.as_view(), name='notifications'),
     path('notifications/mark-read/', NotificationMarkReadView.as_view(), name='notifications-mark-read-all'),
