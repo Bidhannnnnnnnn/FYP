@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './AdvertiserDashboard.css'; // Leverage existing dashboard styles
 import api from '../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import logoImg from '../assets/BimbasetuLogo.png';
 
 const Billing = () => {
     const [userRole, setUserRole] = useState(null);
     const [bookings, setBookings] = useState([]);
     const [stats, setStats] = useState({ total: 0, pending: 0 });
     const [loading, setLoading] = useState(true);
+    const [downloading, setDownloading] = useState(false);
+    const [generatingInvoice, setGeneratingInvoice] = useState(null);
 
     // Filters and Sorting State
     const [searchTerm, setSearchTerm] = useState('');
@@ -80,6 +85,180 @@ const Billing = () => {
         }
     };
 
+    const handleDownloadReport = async () => {
+        try {
+            setDownloading(true);
+            const response = await api.get('campaigns/reports/download/', { responseType: 'blob' });
+            
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `financial-report-${userRole}-${dateStr}.csv`);
+            
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+        } catch (error) {
+            console.error("Failed to download report", error);
+            alert("Failed to download report. Please try again.");
+        } finally {
+            setDownloading(false);
+        }
+    };
+
+    const handleDownloadInvoice = async (booking) => {
+        try {
+            setGeneratingInvoice(booking.id);
+            const doc = new jsPDF();
+            
+            // 1. Logo Embedding via Base64 Canvas
+            const getBase64ImageFromURL = (url) => {
+                return new Promise((resolve, reject) => {
+                    var img = new Image();
+                    img.setAttribute("crossOrigin", "anonymous");
+                    img.onload = () => {
+                        var canvas = document.createElement("canvas");
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        var ctx = canvas.getContext("2d");
+                        ctx.drawImage(img, 0, 0);
+                        var dataURL = canvas.toDataURL("image/png");
+                        resolve({ dataURL, width: img.width, height: img.height });
+                    };
+                    img.onerror = error => reject(error);
+                    img.src = url;
+                });
+            };
+
+            const logoData = await getBase64ImageFromURL(logoImg);
+            const targetWidth = 40;
+            const targetHeight = (logoData.height / logoData.width) * targetWidth;
+            doc.addImage(logoData.dataURL, 'PNG', 14, 15, targetWidth, targetHeight);
+
+            // 2. Add Invoice Header
+            doc.setFontSize(24);
+            doc.setTextColor(31, 41, 55);
+            doc.setFont("helvetica", "bold");
+            doc.text("INVOICE", 140, 25);
+            doc.setFont("helvetica", "normal");
+
+            // 3. Company Info
+            doc.setFontSize(10);
+            doc.setTextColor(107, 114, 128); // #6B7280
+            doc.text("Bimbasetu Advertising Platform", 14, targetHeight + 22);
+            doc.text("Kathmandu, Nepal", 14, targetHeight + 27);
+            doc.text("VAT No: 123456789", 14, targetHeight + 32);
+
+            // 4. Client / Booking Info
+            doc.setFontSize(11);
+            doc.setTextColor(31, 41, 55);
+            doc.setFont("helvetica", "bold");
+            doc.text("Billed To:", 140, targetHeight + 17);
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(107, 114, 128);
+            doc.text(`${localStorage.getItem('name') || 'Client Name'}`, 140, targetHeight + 22);
+            doc.text(`Role: ${userRole.toUpperCase()}`, 140, targetHeight + 27);
+            doc.text(`Transaction ID: #${booking.id.toString().padStart(5, '0')}`, 140, targetHeight + 32);
+            doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`, 140, targetHeight + 37);
+
+            // Divider Line
+            doc.setDrawColor(229, 231, 235);
+            doc.line(14, targetHeight + 45, 196, targetHeight + 45);
+
+            // 5. Line Items (Table) Reverse VAT Extraction
+            const totalPrice = parseFloat(booking.price_calculated || 0);
+            const basePrice = totalPrice / 1.13;
+            const vatAmount = totalPrice - basePrice;
+
+            autoTable(doc, {
+                startY: targetHeight + 52,
+                head: [['Description', 'Date Range', 'Status', 'Rate (NRs)', 'Amount (NRs)']],
+                body: [
+                    [
+                        `${booking.campaign_name || 'Campaign #' + booking.campaign}\nBillboard: ${booking.billboard_title || '#' + booking.billboard}`,
+                        `${booking.start_date} to ${booking.end_date}`,
+                        booking.booking_status.replace('_', ' ').toUpperCase(),
+                        basePrice.toFixed(2),
+                        basePrice.toFixed(2)
+                    ]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [102, 123, 104], textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 10, cellPadding: 10, textColor: [75, 85, 99] }, // Increased cell padding to give it volume
+                columnStyles: {
+                    4: { halign: 'right', fontStyle: 'bold', textColor: [31, 41, 55] },
+                    3: { halign: 'right' }
+                }
+            });
+
+            // 6. Totals Block
+            const finalY = doc.lastAutoTable.finalY + 15;
+            doc.setFontSize(10);
+            doc.setTextColor(75, 85, 99);
+            
+            doc.text("Subtotal:", 140, finalY);
+            doc.text(`NRs. ${basePrice.toFixed(2)}`, 196, finalY, { align: 'right' });
+
+            doc.text("VAT (13%):", 140, finalY + 8);
+            doc.text(`NRs. ${vatAmount.toFixed(2)}`, 196, finalY + 8, { align: 'right' });
+
+            doc.setFontSize(14);
+            doc.setTextColor(31, 41, 55);
+            doc.setFont("helvetica", "bold");
+            doc.text("Total Paid:", 140, finalY + 18);
+            doc.text(`NRs. ${totalPrice.toFixed(2)}`, 196, finalY + 18, { align: 'right' });
+            doc.setFont("helvetica", "normal");
+
+            // 7. Payment Information & Terms Box
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.text("Payment Information", 14, finalY);
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(107, 114, 128);
+            doc.text("Status: PAID & SETTLED", 14, finalY + 6);
+            doc.text("Method: Bimbasetu Standard Gateway", 14, finalY + 11);
+
+            // Shaded Box for Terms & Conditions
+            const termsBoxY = finalY + 30;
+            doc.setFillColor(249, 250, 251); // Light Gray Background
+            doc.setDrawColor(243, 244, 246); // Border Color
+            doc.roundedRect(14, termsBoxY, 182, 45, 3, 3, 'FD'); 
+            
+            doc.setFontSize(10);
+            doc.setTextColor(31, 41, 55);
+            doc.setFont("helvetica", "bold");
+            doc.text("Terms & Conditions", 20, termsBoxY + 10);
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(107, 114, 128);
+            doc.text("1. All advertising sales are final. Standard platform grace periods natively apply to campaign halts.", 20, termsBoxY + 18);
+            doc.text("2. Please contact Bimbasetu Corporate Support within 15 days for any recognized discrepancies.", 20, termsBoxY + 24);
+            doc.text("3. This tax invoice is issued electronically and serves as verifiable proof of transaction processing.", 20, termsBoxY + 30);
+            doc.text("4. Subject entirely to Nepal jurisdiction regarding domestic electronic commerce mandates.", 20, termsBoxY + 36);
+
+            // 8. Legal Disclaimer Footer
+            doc.setFontSize(9);
+            doc.setTextColor(156, 163, 175);
+            doc.text("Thank you for advertising with Bimbasetu. This is a computer generated invoice and requires no signature.", 105, 280, { align: 'center' });
+
+            // 8. Stream the PDF Output
+            doc.save(`Invoice_${booking.id}_${booking.start_date}.pdf`);
+            
+        } catch (error) {
+            console.error("Failed to generate invoice", error);
+            alert("Failed to generate invoice. Please try again.");
+        } finally {
+            setGeneratingInvoice(null);
+        }
+    };
+
     // Derived states (Filtering + Sorting)
     const processedBookings = useMemo(() => {
         let result = [...bookings];
@@ -147,10 +326,12 @@ const Billing = () => {
     const { totalLabel, pendingLabel } = getRoleLabels();
 
     return (
-        <div className="view-container">
-            <div style={{ marginBottom: '32px' }}>
-                <h3 style={{ margin: 0, fontSize: '28px', color: '#1F2937', fontWeight: '700', fontFamily: 'Outfit, sans-serif' }}>Billing & Payments</h3>
-                <p style={{ margin: '6px 0 0 0', color: '#6B7280', fontSize: '15px' }}>Comprehensive overview of all your financial transactions.</p>
+        <div className="view-container" style={{ paddingBottom: '40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+                <div>
+                    <h1 style={{ margin: '0 0 8px', fontSize: '32px', color: '#1F2937', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.01em' }}>Billing & Payments</h1>
+                    <p style={{ margin: 0, color: '#6B7280', fontSize: '16px' }}>Comprehensive overview of all your financial transactions.</p>
+                </div>
             </div>
 
             {/* Financial Stats Row */}
@@ -238,6 +419,35 @@ const Billing = () => {
                             <option value="AmountLow">Amount: Low to High</option>
                         </select>
                     </div>
+
+                    <div style={{ width: '1px', height: '28px', background: '#E5E7EB', margin: '0 4px' }}></div>
+
+                    <button 
+                        onClick={handleDownloadReport}
+                        disabled={downloading}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 16px',
+                            background: downloading ? '#E5E7EB' : 'var(--admin-primary-green, #667B68)',
+                            color: downloading ? '#9CA3AF' : 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: downloading ? 'not-allowed' : 'pointer',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {downloading ? (
+                            <svg className="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                        ) : (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        )}
+                        {downloading ? 'Preparing...' : 'CSV Report'}
+                    </button>
                 </div>
             </div>
 
@@ -294,38 +504,69 @@ const Billing = () => {
                                     {parseFloat(b.price_calculated).toLocaleString()}
                                 </td>
                                 <td style={{ padding: '16px 20px' }}>
-                                    {b.booking_status === 'approved' && userRole === 'advertiser' ? (
-                                        <button
-                                            onClick={() => handlePayment(b.id)}
-                                            style={{
-                                                padding: '8px 16px',
-                                                fontSize: '13px',
-                                                background: '#10B912',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                fontWeight: '600',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s ease',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                boxShadow: '0 2px 4px rgba(16, 185, 18, 0.2)'
-                                            }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#0E9F10'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.background = '#10B912'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                                        >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
-                                            Pay Now
-                                        </button>
-                                    ) : ['paid', 'active'].includes(b.booking_status) ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', fontWeight: '600', fontSize: '13px' }}>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                            Settled
-                                        </div>
-                                    ) : (
-                                        <span style={{ fontSize: '13px', color: '#9CA3AF' }}>-</span>
-                                    )}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {b.booking_status === 'approved' && userRole === 'advertiser' ? (
+                                            <button
+                                                onClick={() => handlePayment(b.id)}
+                                                style={{
+                                                    padding: '8px 16px',
+                                                    fontSize: '13px',
+                                                    background: '#10B912',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s ease',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    boxShadow: '0 2px 4px rgba(16, 185, 18, 0.2)'
+                                                }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#0E9F10'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#10B912'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
+                                                Pay Now
+                                            </button>
+                                        ) : ['paid', 'active'].includes(b.booking_status) ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', fontWeight: '600', fontSize: '13px' }}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                Settled
+                                            </div>
+                                        ) : (
+                                            <span style={{ fontSize: '13px', color: '#9CA3AF' }}>-</span>
+                                        )}
+                                        
+                                        {/* Download PDF Invoice Hook */}
+                                        {['paid', 'active'].includes(b.booking_status) && (
+                                            <button
+                                                onClick={() => handleDownloadInvoice(b)}
+                                                disabled={generatingInvoice === b.id}
+                                                title="Download Invoice PDF"
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    background: 'transparent',
+                                                    border: '1px solid #D1D5DB',
+                                                    borderRadius: '6px',
+                                                    color: '#4B5563',
+                                                    cursor: generatingInvoice === b.id ? 'not-allowed' : 'pointer',
+                                                    transition: 'all 0.2s ease',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                                onMouseEnter={(e) => { if (generatingInvoice !== b.id) { e.currentTarget.style.background = '#F3F4F6'; e.currentTarget.style.borderColor = '#9CA3AF'; } }}
+                                                onMouseLeave={(e) => { if (generatingInvoice !== b.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#D1D5DB'; } }}
+                                            >
+                                                {generatingInvoice === b.id ? (
+                                                    <svg className="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><path d="M4.93 19.07l2.83-2.83"></path><path d="M16.24 7.76l2.83-2.83"></path><path d="M4.93 4.93l2.83 2.83"></path><path d="M16.24 16.24l2.83 2.83"></path></svg>
+                                                ) : (
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}

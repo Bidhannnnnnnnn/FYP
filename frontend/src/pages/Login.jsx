@@ -22,7 +22,16 @@ const Login = () => {
             localStorage.setItem('name', response.data.name);
             localStorage.setItem('showLoginToast', 'true');
 
-            navigate('/dashboard');
+            const role = response.data.role;
+            if (role === 'advertiser') {
+                navigate('/advertiser');
+            } else if (role === 'business') {
+                navigate('/owner');
+            } else if (role === 'superadmin') {
+                navigate('/admin');
+            } else {
+                navigate('/dashboard');
+            }
 
         } catch (error) {
             console.error('Login Failed:', error);

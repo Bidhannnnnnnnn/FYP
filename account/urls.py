@@ -2,7 +2,7 @@ from django.urls import path, include
 from account.views import (
     UserRegistrationView, UserLoginView, UserProfileView, UserChangePasswordView,
     SendPasswordResetEmailView, UserPasswordResetView, UserListView, GoogleLoginView,
-    NotificationListView, NotificationMarkReadView
+    NotificationListView, NotificationMarkReadView, UserManageDetailView, UserSignupInviteView
 )
 
 urlpatterns = [
@@ -11,6 +11,9 @@ urlpatterns = [
     
     path('login/', UserLoginView.as_view(),
     name='login'),
+    
+    path('signup-invite/', UserSignupInviteView.as_view(),
+    name='signup-invite'),
     
     path('profile/', UserProfileView.as_view(),
     name='profile'),
@@ -23,6 +26,9 @@ urlpatterns = [
     
     path('userlist/', UserListView.as_view(),
     name='userlist'),
+    
+    path('user-manage/<int:pk>/', UserManageDetailView.as_view(),
+    name='user-manage'),
     
     path('reset-password/<uid>/<token>/', UserPasswordResetView.as_view(),
     name='reset-password'),

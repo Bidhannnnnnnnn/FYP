@@ -1,8 +1,13 @@
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from .models import Billboard, OwnerDocument
-from .serializers import BillboardCreateSerializer, BillboardListSerializer, OwnerDocumentSerializer
+from .models import Billboard, OwnerDocument, BillboardReview
+from .serializers import (
+    BillboardCreateSerializer, 
+    BillboardListSerializer, 
+    OwnerDocumentSerializer,
+    BillboardReviewSerializer
+)
 from .permissions import IsSuperAdminOrAdmin
 from account.permissions import IsBusinessUser
 from django.utils import timezone
@@ -57,14 +62,63 @@ class ApproveBillboardView(generics.UpdateAPIView):
     def patch(self, request, *args, **kwargs):
         billboard = self.get_object()
         action = request.data.get('action')
+        from account.models import Notification
+        
         if action == 'approve':
             billboard.status = 'approved'
+            billboard.feedback_message = None
             billboard.save()
+            
+            # Record in history
+            BillboardReview.objects.create(
+                billboard=billboard,
+                user=request.user,
+                action_type='admin_review',
+                status_result='approved',
+                feedback="Billboard approved"
+            )
+            Notification.objects.create(
+                recipient=billboard.owner,
+                notification_type='billboard_update',
+                message=f"Your billboard '{billboard.title}' has been approved and is now live!",
+                target_id=str(billboard.id)
+            )
             return Response({'msg': 'Billboard approved'}, status=status.HTTP_200_OK)
+        elif action == 'hide':
+            billboard.status = 'hidden'
+            billboard.save()
+            
+            # Record in history
+            BillboardReview.objects.create(
+                billboard=billboard,
+                user=request.user,
+                action_type='admin_review',
+                status_result='hidden',
+                feedback="Billboard hidden from marketplace"
+            )
+            return Response({'msg': 'Billboard hidden'}, status=status.HTTP_200_OK)
         elif action == 'reject':
             billboard.status = 'rejected'
+            feedback = request.data.get('feedback_message', '').strip()
+            billboard.feedback_message = feedback if feedback else None
             billboard.save()
-            return Response({'msg': 'Billboard rejected'}, status=status.HTTP_200_OK)
+            
+            # Record in history
+            BillboardReview.objects.create(
+                billboard=billboard,
+                user=request.user,
+                action_type='admin_review',
+                status_result='rejected',
+                feedback=feedback
+            )
+            
+            Notification.objects.create(
+                recipient=billboard.owner,
+                notification_type='billboard_update',
+                message=f"Your billboard '{billboard.title}' requires improvements. Feedback: {feedback}" if feedback else f"Your billboard '{billboard.title}' requires improvements.",
+                target_id=str(billboard.id)
+            )
+            return Response({'msg': 'Billboard rejected and feedback sent'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -92,6 +146,32 @@ class BillboardUpdateView(generics.UpdateAPIView):
         if user.role == 'superadmin':
             return Billboard.objects.all()
         return Billboard.objects.filter(owner=user)
+
+    def perform_update(self, serializer):
+        billboard = serializer.save()
+        
+        # Record in history
+        BillboardReview.objects.create(
+            billboard=billboard,
+            user=self.request.user,
+            action_type='user_update',
+            status_result=billboard.status,
+            feedback="User updated billboard details/documents"
+        )
+        
+        # Automatically set back to pending if the owner makes an update after a rejection
+        if billboard.status == 'rejected':
+            billboard.status = 'pending'
+            billboard.save()
+            
+            # Record the status change to pending
+            BillboardReview.objects.create(
+                billboard=billboard,
+                user=self.request.user,
+                action_type='user_update',
+                status_result='pending',
+                feedback="Status automatically changed to pending after user update"
+            )
 
 # Owner deletes their billboard
 class BillboardDeleteView(generics.DestroyAPIView):
@@ -123,4 +203,19 @@ class BillboardActiveAdsView(generics.ListAPIView):
             start_date__lte=today,
             end_date__gte=today
         ).select_related('campaign__advertiser')
+
+class BillboardReviewListView(generics.ListAPIView):
+    serializer_class = BillboardReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        billboard_id = self.kwargs.get('pk')
+        billboard = Billboard.objects.get(id=billboard_id)
+        
+        # Superadmins can see everything. Owners can see history of their own billboards.
+        if self.request.user.role == 'superadmin' or billboard.owner == self.request.user:
+            return BillboardReview.objects.filter(billboard_id=billboard_id)
+        
+        from rest_framework.exceptions import PermissionDenied
+        raise PermissionDenied("You do not have permission to view this billboard's history.")
 

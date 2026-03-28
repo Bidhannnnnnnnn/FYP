@@ -2,6 +2,51 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, NavLink } from 'react-router-dom';
 import api from '../services/api';
 import './AdvertiserDashboard.css';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+
+const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6'];
+
+const CustomPieTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div style={{
+                background: '#fff', padding: '15px', borderRadius: '12px',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.1)', border: 'none'
+            }}>
+                <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#6B7280', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {payload[0].name}
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                     <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: payload[0].payload.fill }} />
+                    <p style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#111827' }}>
+                        {payload[0].value} <span style={{ fontSize: '12px', fontWeight: '500', color: '#9CA3AF' }}>Campaigns</span>
+                    </p>
+                </div>
+            </div>
+        );
+    }
+    return null;
+};
+
+const CustomBarTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        const fullDate = payload[0].payload.fullDate;
+        return (
+            <div style={{
+                background: '#fff', padding: '15px', borderRadius: '12px',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.1)', border: 'none'
+            }}>
+                <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#6B7280', fontWeight: '500' }}>
+                    {label} {fullDate ? <span style={{ color: '#9CA3AF', fontWeight: '400', marginLeft: '4px' }}>({fullDate})</span> : null}
+                </p>
+                <p style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#111827' }}>
+                    NRs. {payload[0].value.toLocaleString()} <span style={{ fontSize: '12px', fontWeight: '400', color: '#667B68' }}>Spending</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
 
 import BookingModal from './BookingModal';
 import NotificationBell from '../components/Notifications/NotificationBell';
@@ -10,6 +55,8 @@ import Billing from './Billing';
 import BillboardDetails from './BillboardDetails';
 import BillboardBooking from './BillboardBooking';
 import BookingDetailsView from './BookingDetailsView';
+import Explore from './Explore';
+import logoImg from '../assets/BimbasetuLogo.png';
 
 const AdvertiserDashboard = () => {
     const navigate = useNavigate();
@@ -44,6 +91,12 @@ const AdvertiserDashboard = () => {
         activeBillboards: 0,
         invested: 0
     });
+    const [chartData, setChartData] = useState({
+        campaignStatus: [],
+        monthlySpending: []
+    });
+    const [revenuePeriod, setRevenuePeriod] = useState('monthly');
+    const [selectedBillboardId, setSelectedBillboardId] = useState('');
     const [loading, setLoading] = useState(true);
 
     // UI State
@@ -89,6 +142,22 @@ const AdvertiserDashboard = () => {
                 invested: totalInvested
             });
 
+            // Derive Chart Data
+            const statusCounts = bookingsRes.data.reduce((acc, curr) => {
+                const status = curr.booking_status || 'pending';
+                acc[status] = (acc[status] || 0) + 1;
+                return acc;
+            }, {});
+            const campaignStatusData = Object.keys(statusCounts).map(key => ({
+                name: key.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                value: statusCounts[key]
+            }));
+
+            setChartData(prev => ({
+                ...prev,
+                campaignStatus: campaignStatusData
+            }));
+
             setLoading(false);
         } catch (error) {
             console.error("Dashboard Fetch Error:", error);
@@ -113,6 +182,81 @@ const AdvertiserDashboard = () => {
         }
         fetchData();
     }, [navigate]);
+
+    // Aggregate Spending Data based on Filters & Period
+    useEffect(() => {
+        if (!bookings.length) return;
+
+        let filteredBookings = bookings;
+        if (selectedBillboardId) {
+            filteredBookings = filteredBookings.filter(b => b.billboard?.toString() === selectedBillboardId.toString());
+        }
+
+        let spendingData = [];
+        const now = new Date();
+
+        if (revenuePeriod === 'hourly') {
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            for (let i = 0; i < 24; i++) {
+                const hourStr = `${i.toString().padStart(2, '0')}:00`;
+                const exactDate = new Date(todayStart.getTime() + i * 3600000);
+                spendingData.push({
+                    name: hourStr,
+                    fullDate: exactDate.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    Spending: 0, _start: exactDate, _end: new Date(todayStart.getTime() + (i + 1) * 3600000)
+                });
+            }
+        } else if (revenuePeriod === 'daily') {
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+                spendingData.push({
+                    name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                    fullDate: d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    Spending: 0, _start: d, _end: new Date(d.getTime() + 86400000)
+                });
+            }
+        } else if (revenuePeriod === 'weekly') {
+            for (let i = 3; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (i * 7));
+                const weekStart = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay()); // Sunday
+                const weekEnd = new Date(weekStart.getTime() + 6 * 86400000); // Saturday
+                spendingData.push({
+                    name: `Week ${4 - i}`,
+                    fullDate: `${weekStart.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`,
+                    Spending: 0, _start: weekStart, _end: new Date(weekStart.getTime() + 7 * 86400000)
+                });
+            }
+        } else {
+            const monthsStr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            for (let i = 11; i >= 0; i--) {
+                const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const nextMonthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+                spendingData.push({
+                    name: monthsStr[monthDate.getMonth()],
+                    fullDate: monthDate.getFullYear().toString(),
+                    Spending: 0, _start: monthDate, _end: nextMonthDate
+                });
+            }
+        }
+
+        filteredBookings.forEach(b => {
+            if (['approved', 'active', 'paid'].includes(b.booking_status) && b.created_at) {
+                try {
+                    const bDate = new Date(b.created_at);
+                    const cost = parseFloat(b.price_calculated) || 0;
+                    const bucket = spendingData.find(d => bDate >= d._start && bDate < d._end);
+                    if (bucket) bucket.Spending += cost;
+                } catch (e) { }
+            }
+        });
+
+        const finalSpendingData = spendingData.map(r => ({ name: r.name, fullDate: r.fullDate, Spending: r.Spending }));
+
+        setChartData(prev => ({
+            ...prev,
+            monthlySpending: finalSpendingData
+        }));
+    }, [bookings, revenuePeriod, selectedBillboardId]);
 
     const handleLogout = () => {
         setToast({ show: true, message: 'Logging out...', type: 'error' });
@@ -212,108 +356,124 @@ const AdvertiserDashboard = () => {
             <div className="analytics-section">
                 <div className="analytics-header">
                     <h3>Analytics Overview</h3>
-                    <div className="analytics-actions">
-                        <button className="period-btn active">Week</button>
-                        <button className="period-btn">Month</button>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginTop: '20px' }}>
+                    
+                    {/* Campaign Status PieChart */}
+                    <div className="view-container" style={{ background: '#fff', borderRadius: '24px', padding: '30px', border: '1px solid #F3F4F6', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                        <div style={{ marginBottom: '24px' }}>
+                            <h4 style={{ margin: '0', fontSize: '20px', fontWeight: '700', color: '#111827' }}>Campaign Status Distribution</h4>
+                            <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6B7280' }}>All-time campaign progress.</p>
+                        </div>
+                        <div style={{ height: '280px' }}>
+                            {chartData.campaignStatus.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={chartData.campaignStatus}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={70}
+                                            outerRadius={100}
+                                            paddingAngle={6}
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            {chartData.campaignStatus.map((entry, index) => {
+                                                const clrMap = { 'Approved': '#10B981', 'Pending': '#F59E0B', 'Rejected': '#EF4444', 'Changes Requested': '#3B82F6', 'Active': '#047857', 'Paid': '#34D399' };
+                                                return <Cell key={`cell-${index}`} fill={clrMap[entry.name] || COLORS[index % COLORS.length]} />;
+                                            })}
+                                        </Pie>
+                                        <RechartsTooltip content={<CustomPieTooltip />} />
+                                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>No campaigns found.</div>}
+                        </div>
+                    </div>
+
+
+                    {/* Spending BarChart */}
+                    <div className="view-container" style={{ background: '#fff', borderRadius: '24px', padding: '30px', border: '1px solid #F3F4F6', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', gridColumn: '1 / -1' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+                            <div>
+                                <h4 style={{ margin: '0', fontSize: '20px', fontWeight: '700', color: '#111827' }}>Advertising Spend</h4>
+                                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Total money invested over time.</p>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                {/* Billboard Filter */}
+                                <select
+                                    value={selectedBillboardId}
+                                    onChange={(e) => setSelectedBillboardId(e.target.value)}
+                                    style={{
+                                        padding: '8px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #E5E7EB',
+                                        fontSize: '13px',
+                                        outline: 'none',
+                                        background: '#F9FAFB',
+                                        color: '#374151',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <option value="">All Billboards</option>
+                                    {[...new Set(bookings.map(b => b.billboard_details?.title || b.billboard))].map(bbTitle => {
+                                        const bbId = bookings.find(b => (b.billboard_details?.title || b.billboard) === bbTitle)?.billboard;
+                                        return <option key={bbId} value={bbId}>{bbTitle}</option>
+                                    })}
+                                </select>
+
+                                {/* Period Toggles */}
+                                <div style={{ display: 'flex', background: '#F3F4F6', padding: '4px', borderRadius: '10px', gap: '4px' }}>
+                                    {['hourly', 'daily', 'weekly', 'monthly'].map((p) => (
+                                        <button
+                                            key={p}
+                                            onClick={() => setRevenuePeriod(p)}
+                                            style={{
+                                                padding: '6px 14px',
+                                                borderRadius: '8px',
+                                                border: 'none',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                background: revenuePeriod === p ? '#fff' : 'transparent',
+                                                color: revenuePeriod === p ? '#111827' : '#6B7280',
+                                                boxShadow: revenuePeriod === p ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
+                                            }}
+                                        >
+                                            {p.charAt(0).toUpperCase() + p.slice(1)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ height: '320px' }}>
+                            {chartData.monthlySpending.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData.monthlySpending} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 13 }} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 13 }} tickFormatter={(v) => `NRs. ${v}`} />
+                                        <RechartsTooltip cursor={{ fill: '#F9FAFB', radius: 10 }} content={<CustomBarTooltip />} />
+                                        <Bar dataKey="Spending" radius={[10, 10, 10, 10]} barSize={45}>
+                                            {chartData.monthlySpending.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={'#3B82F6'} fillOpacity={0.9} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>No spending activity.</div>}
+                        </div>
                     </div>
                 </div>
-                {/* <div className="analytics-chart-container">
-                    <svg className="mock-chart" viewBox="0 0 1000 200" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stopColor="#667B68" stopOpacity="0.4" />
-                                <stop offset="100%" stopColor="#667B68" stopOpacity="0" />
-                            </linearGradient>
-                        </defs>
-                        <path d="M0,150 Q100,100 200,120 T400,80 T600,100 T800,40 T1000,80 V200 H0 Z" fill="url(#chartGradient)" />
-                        <path d="M0,150 Q100,100 200,120 T400,80 T600,100 T800,40 T1000,80" fill="none" stroke="#667B68" strokeWidth="3" />
-                        <circle cx="200" cy="120" r="4" fill="#fff" stroke="#667B68" strokeWidth="2" />
-                        <circle cx="400" cy="80" r="4" fill="#fff" stroke="#667B68" strokeWidth="2" />
-                        <circle cx="600" cy="100" r="4" fill="#fff" stroke="#667B68" strokeWidth="2" />
-                        <circle cx="800" cy="40" r="4" fill="#fff" stroke="#667B68" strokeWidth="2" />
-                    </svg>
-                    <div className="chart-labels">
-                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-                    </div>
-                </div> */}
             </div>
         </>
     );
 
-    const ExploreBillboards = () => (
-        <div className="view-container">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
-                <div>
-                    <h3 style={{ margin: 0, fontSize: '24px', color: '#1F2937' }}>Explore Billboards</h3>
-                    <p style={{ margin: '4px 0 0 0', color: '#6B7280', fontSize: '14px' }}>Find the perfect spot for your next campaign.</p>
-                </div>
-            </div>
-            <div className="billboards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '25px' }}>
-                {billboards.length === 0 ? (
-                    <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '60px', background: '#fff', borderRadius: '16px', border: '1px dashed #ddd' }}>
-                        <p style={{ color: '#6B7280' }}>No billboards available for booking right now.</p>
-                    </div>
-                ) : billboards.map(bb => (
-                    <div key={bb.id} className="billboard-premium-card" style={{
-                        background: '#fff',
-                        borderRadius: '20px',
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
-                        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                        border: '1px solid rgba(0,0,0,0.03)',
-                        cursor: 'pointer'
-                    }} onClick={() => navigate(`/billboard/${bb.id}`)}>
-                        <div style={{ height: '200px', position: 'relative', overflow: 'hidden' }}>
-                            {bb.image ? (
-                                <img src={bb.image} alt={bb.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                                <div style={{ width: '100%', height: '100%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>No Preview</div>
-                            )}
-                            <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', gap: '8px' }}>
-                                <span style={{
-                                    padding: '4px 10px',
-                                    background: 'rgba(255,255,255,0.9)',
-                                    backdropFilter: 'blur(4px)',
-                                    borderRadius: '30px',
-                                    fontSize: '11px',
-                                    fontWeight: '700',
-                                    color: '#667B68',
-                                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                                }}>
-                                    {bb.display_type}
-                                </span>
-                            </div>
-                        </div>
-                        <div style={{ padding: '20px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                <h4 style={{ margin: 0, fontSize: '18px', color: '#1F2937', fontWeight: '700' }}>{bb.title}</h4>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#F0FDF4', padding: '2px 8px', borderRadius: '4px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#166534' }}>{bb.traffic_density} Traffic</span>
-                                </div>
-                            </div>
-                            <p style={{ margin: '0 0 15px 0', color: '#6B7280', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                {bb.location}
-                            </p>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '15px', borderTop: '1px solid #F3F4F6' }}>
-                                <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Size: {bb.size}</span>
-                                <button
-                                    className="btn-primary"
-                                    style={{ padding: '8px 20px', fontSize: '14px' }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/billboard/${bb.id}`);
-                                    }}
-                                >
-                                    Book Now
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
+    // ... old Explore removed ...
 
     const MyAds = () => (
         <div className="view-container">
@@ -476,7 +636,7 @@ const AdvertiserDashboard = () => {
             {/* Sidebar */}
             <div className="sidebar">
                 <div className="brand-section">
-                    <h2>BimbaSetu</h2>
+                    <img src={logoImg} alt="Bimbasetu Logo" className="sidebar-logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
                 </div>
 
                 <nav className="sidebar-nav" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
@@ -507,6 +667,15 @@ const AdvertiserDashboard = () => {
                             >
                                 <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
                                 <span className="nav-text">My Bookings</span>
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink
+                                to="/advertiser/billing"
+                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+                            >
+                                <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg></span>
+                                <span className="nav-text">Billing & Payments</span>
                             </NavLink>
                         </li>
                     </ul>
@@ -577,7 +746,7 @@ const AdvertiserDashboard = () => {
                 ) : (
                     <>
                         {activeTab === 'dashboard' && <DashboardHome />}
-                        {activeTab === 'explore' && <ExploreBillboards />}
+                        {activeTab === 'explore' && <Explore billboards={billboards} />}
                         {activeTab === 'bookings' && <MyAds />}
                         {activeTab === 'profile' && <Profile />}
                         {activeTab === 'billing' && <Billing />}

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Billboard, OwnerDocument
+from .models import Billboard, OwnerDocument, BillboardReview
 
 @admin.register(Billboard)
 class BillboardAdmin(admin.ModelAdmin):
@@ -12,3 +12,9 @@ class BillboardAdmin(admin.ModelAdmin):
 class OwnerDocumentAdmin(admin.ModelAdmin):
     list_display = ('owner','document_name','verified','uploaded_at','verified_by')
     list_filter = ('verified',)
+
+@admin.register(BillboardReview)
+class BillboardReviewAdmin(admin.ModelAdmin):
+    list_display = ('billboard','user','action_type','status_result','created_at')
+    list_filter = ('action_type','status_result','created_at')
+    search_fields = ('billboard__title','user__email','feedback')

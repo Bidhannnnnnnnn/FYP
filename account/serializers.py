@@ -1,12 +1,10 @@
-from xml.dom import ValidationErr
 from rest_framework import serializers
 from account.models import User, Notification
 from account.utils import Util
 from django.utils.encoding import smart_str, force_bytes, DjangoUnicodeDecodeError
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-
-
+from django.utils.crypto import get_random_string
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -41,7 +39,7 @@ class UserLoginSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields=['id', 'email', 'name', 'role']
+        fields=['id', 'email', 'name', 'role', 'phone_number', 'address', 'company_name', 'bio']
         extra_kwargs = {
             'email': {'read_only': True},
             'role': {'read_only': True}
@@ -101,7 +99,7 @@ class SendPassowrdResetEmailSerializer(serializers.Serializer):
             return attrs
                         
         else:
-            raise ValidationErr('You are not a registered User')
+            raise serializers.ValidationError('You are not a registered User')
         
         
 class UserPasswordResetSerializer(serializers.Serializer):
@@ -123,6 +121,7 @@ class UserPasswordResetSerializer(serializers.Serializer):
       if not PasswordResetTokenGenerator().check_token(user, token):
         raise serializers.ValidationError('Token is not Valid or Expired')
       user.set_password(password)
+      user.is_active = True
       user.save()
       return attrs
     except DjangoUnicodeDecodeError as identifier:
@@ -139,3 +138,47 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     def get_actor_name(self, obj):
         return obj.actor.name if obj.actor else "System"
+
+class UserSignupInviteSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=255)
+    name = serializers.CharField(max_length=255)
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
+
+    class Meta:
+        fields = ['email', 'name', 'role']
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        name = attrs.get('name')
+        role = attrs.get('role')
+
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError("Email already exists")
+
+        # Create inactive user with random password
+        user = User.objects.create_user(
+            email=email,
+            name=name,
+            tc=True, # Implicitly agreed in multi-step flow
+            role=role,
+            password=get_random_string(16)
+        )
+        user.is_active = False
+        user.save()
+
+        # Generate Token for Password Set (Signup Verification)
+        uid = urlsafe_base64_encode(force_bytes(user.id))
+        token = PasswordResetTokenGenerator().make_token(user)
+        # Use existing frontend reset-password route
+        link = f'http://localhost:5173/reset-password/{uid}/{token}'
+        
+        # Send Email
+        body = f'Hi {name},\n\nWelcome to Bimbasetu! Please click the following link to set your password and complete your registration:\n\n{link}'
+        data = {
+            'subject': 'Complete Your Bimbasetu Registration',
+            'body': body,
+            'to_email': user.email,
+        }
+        Util.send_email(data)
+
+        return attrs

@@ -13,6 +13,7 @@ const BillboardPlayer = () => {
     // 1. Fetch data
     useEffect(() => {
         const fetchData = async () => {
+            if (!id) return;
             try {
                 // Fetch billboard details for name/branding
                 const bbRes = await api.get(`billboards/detail/${id}/`);

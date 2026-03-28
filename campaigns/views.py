@@ -221,6 +221,7 @@ class MyBookingsListView(generics.ListAPIView):
             return Booking.objects.all()
         return Booking.objects.none()
 
+
 class BookingUpdateView(generics.UpdateAPIView):
     serializer_class = BookingCreateSerializer
     permission_classes = [IsAuthenticated]
@@ -230,16 +231,75 @@ class BookingUpdateView(generics.UpdateAPIView):
         if user.role == 'superadmin':
             return Booking.objects.all()
         return Booking.objects.filter(
-            campaign__advertiser=user, 
-            booking_status__in=['changes_requested', 'rejected']
+            campaign__advertiser=user,
+            booking_status__in=['pending', 'changes_requested', 'rejected']
         )
 
     def perform_update(self, serializer):
-        # Update price and create slots would be complex here, 
-        # normally we'd delete old slots and create new ones.
-        # For simplicity in this version, we'll assume updates might need full re-creation
-        # or handle basic updates.
-        serializer.save(booking_status='pending', creative_status='pending')
+        import json
+        from .pricing_engine import PricingEngine
+
+        # 1. Pop slots from validated_data (same as perform_create)
+        slots_json = serializer.validated_data.pop('slots', [])
+        if isinstance(slots_json, str):
+            try:
+                slots_json = json.loads(slots_json)
+            except json.JSONDecodeError:
+                raise ValidationError("Invalid slots format.")
+
+        billboard = serializer.validated_data.get('billboard', serializer.instance.billboard)
+        slot_duration = serializer.validated_data.get('slot_duration_seconds', serializer.instance.slot_duration_seconds)
+        default_frequency = serializer.validated_data.get('frequency_per_hour', serializer.instance.frequency_per_hour)
+
+        # 2. Parse flat slots
+        flat_slots = []
+        for item in slots_json:
+            dt = datetime.strptime(item['date'], '%Y-%m-%d').date()
+            for hr in item['hours']:
+                if isinstance(hr, dict):
+                    h = int(hr['h'])
+                    f = int(hr.get('f', default_frequency))
+                else:
+                    h = int(hr)
+                    f = default_frequency
+                flat_slots.append({'date': dt, 'hour': h, 'frequency': f})
+
+        if not flat_slots:
+            raise ValidationError("At least one time slot must be selected.")
+
+        # 3. Check availability (excluding THIS booking's own existing slots)
+        is_available = True
+        for s in flat_slots:
+            load = slot_duration * s['frequency']
+            check = AvailabilityService.check_availability(
+                billboard.id, [s], load, exclude_booking_id=serializer.instance.id
+            )
+            if not check['available']:
+                is_available = False
+                break
+
+        if not is_available:
+            raise ValidationError({"error": "Capacity exceeded in one or more selected slots."})
+
+        # 4. Recalculate price
+        price = PricingEngine.calculate_price(billboard, flat_slots, slot_duration, default_frequency)
+
+        # 5. Delete old slots and save the booking
+        serializer.instance.slots.all().delete()
+        booking = serializer.save(
+            booking_status='pending',
+            creative_status='pending',
+            price_calculated=price
+        )
+
+        # 6. Create new slots
+        for s in flat_slots:
+            BookingSlot.objects.create(
+                booking=booking,
+                date=s['date'],
+                hour=s['hour'],
+                frequency_per_hour=s['frequency']
+            )
 
 
 # ============ OWNER VIEWS ============
@@ -448,3 +508,66 @@ class PayBookingView(APIView):
             return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class DownloadReportView(APIView):
+    """
+    Generate and serve a downloadable CSV report based on the user's role.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        import csv
+        from django.http import HttpResponse
+        user = request.user
+        role = user.role
+
+        # 1. Query the appropriate bookings
+        if role == 'superadmin':
+            bookings = Booking.objects.all()
+        elif role in ['business', 'admin']:
+            bookings = Booking.objects.filter(billboard__owner=user)
+        elif role == 'advertiser':
+            bookings = Booking.objects.filter(campaign__advertiser=user)
+        else:
+            bookings = Booking.objects.none()
+
+        bookings = bookings.select_related('campaign', 'campaign__advertiser', 'billboard', 'billboard__owner').order_by('-created_at')
+
+        # 2. Setup the HTTP Response for CSV download
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="platform-report.csv"'
+
+        writer = csv.writer(response)
+        
+        # 3. Write Headers
+        writer.writerow([
+            'Transaction ID',
+            'Campaign Name',
+            'Billboard Title',
+            'Location',
+            'Advertiser Email',
+            'Owner Email',
+            'Start Date',
+            'End Date',
+            'Price (NRs)',
+            'Status',
+            'Booked On'
+        ])
+
+        # 4. Write Data Rows
+        for b in bookings:
+            writer.writerow([
+                f"#{str(b.id).zfill(5)}",
+                b.campaign.name if b.campaign else f"Campaign #{b.campaign_id}",
+                b.billboard.title if b.billboard else f"Billboard #{b.billboard_id}",
+                b.billboard.location if b.billboard else "N/A",
+                b.campaign.advertiser.email if (b.campaign and b.campaign.advertiser) else "N/A",
+                b.billboard.owner.email if (b.billboard and b.billboard.owner) else "N/A",
+                b.start_date.strftime('%Y-%m-%d') if b.start_date else "N/A",
+                b.end_date.strftime('%Y-%m-%d') if b.end_date else "N/A",
+                b.price_calculated,
+                b.get_booking_status_display() if hasattr(b, 'get_booking_status_display') else b.booking_status,
+                b.created_at.strftime('%Y-%m-%d %H:%M:%S') if getattr(b, 'created_at', None) else "N/A"
+            ])
+
+        return response

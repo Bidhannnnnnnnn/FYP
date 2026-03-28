@@ -9,7 +9,8 @@ from .views import (
     CalculatePriceView,
     CheckAvailabilityView,
     OwnerOccupancyStatsView,
-    PayBookingView
+    PayBookingView,
+    DownloadReportView
 )
 
 urlpatterns = [
@@ -28,4 +29,5 @@ urlpatterns = [
     path('owner-occupancy-stats/', OwnerOccupancyStatsView.as_view(), name='owner-occupancy-stats'),
     path('bookings/<int:pk>/update/', BookingUpdateView.as_view(), name='update-booking'),
     path('bookings/<int:pk>/action/', BookingApprovalView.as_view(), name='booking-action'),
+    path('reports/download/', DownloadReportView.as_view(), name='download-report'),
 ]

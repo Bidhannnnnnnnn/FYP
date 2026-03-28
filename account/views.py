@@ -5,13 +5,14 @@ from account.permissions import *
 from account.serializers import (
     UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer,
     UserChangePasswordSerializer, SendPassowrdResetEmailSerializer,
-    UserPasswordResetSerializer, NotificationSerializer
+    UserPasswordResetSerializer, NotificationSerializer, UserSignupInviteSerializer
 )
 from django.contrib.auth import authenticate
 from account.renderers import UserRenderer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import generics
 import requests
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
@@ -22,8 +23,6 @@ User = get_user_model()
 
 #Generate token Manually
 def get_tokens_for_user(user):
-    if not user.is_active:
-      raise AuthenticationFailed("User is not active")
 
     refresh = RefreshToken.for_user(user)
 
@@ -48,11 +47,12 @@ class UserLoginView(APIView):
     def post(self, request, format=None):
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            email= serializer.data.get('email')
-            password= serializer.data.get('password')
-            user= authenticate(email=email, password=password)
+            email = serializer.data.get('email')
+            password = serializer.data.get('password')
             
-            if user is not None:
+            # Manually check credentials to allow inactive (banned) users to login
+            user = User.objects.filter(email=email).first()
+            if user is not None and user.check_password(password):
                 token= get_tokens_for_user(user)
                 return Response({
                     'token': token,
@@ -92,9 +92,17 @@ class SendPasswordResetEmailView(APIView):
     renderer_classes= [UserRenderer]
     def post(self, request, format= None):
         serializer=SendPassowrdResetEmailSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({'msg':'Password Reset link send. Please check your Email'}, status=status.HTTP_200_OK)
+
+
+class UserSignupInviteView(APIView):
+    renderer_classes = [UserRenderer]
+
+    def post(self, request, format=None):
+        serializer = UserSignupInviteSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            return Response({'msg':'password reset link sent, pease check your email'}, status=status.HTTP_200_OK)
-        
+            return Response({'msg': 'Verification email sent. Please check your inbox to complete registration.'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -143,6 +151,11 @@ class UserListView(APIView):
         users = User.objects.all()
         serializer = UserProfileSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class UserManageDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsSuperAdmin]
 
 class GoogleLoginView(APIView):
     renderer_classes = [UserRenderer]
@@ -200,7 +213,8 @@ class NotificationListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
-        notifications = Notification.objects.filter(recipient=request.user)
+        user = request.user
+        notifications = Notification.objects.filter(recipient=user).order_by('-created_at')
         serializer = NotificationSerializer(notifications, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -221,3 +235,79 @@ class NotificationMarkReadView(APIView):
         else:
             Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
             return Response({'msg': 'All notifications marked as read'}, status=status.HTTP_200_OK)
+
+# -----------------------------
+# Ban System Views
+# -----------------------------
+class UserBanView(APIView):
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request, pk, format=None):
+        try:
+            user = User.objects.get(pk=pk)
+            if user.role == "superadmin":
+                return Response({'error': 'Cannot ban a superadmin'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            ban_reason = request.data.get('ban_reason', 'Violation of terms.')
+            user.is_active = False
+            user.ban_reason = ban_reason
+            user.save()
+            
+            # Notify the banned user
+            Notification.objects.create(
+                recipient=user,
+                notification_type='system',
+                message=f"Account Suspended: Your account has been suspended by an Admin. Reason: {ban_reason}"
+            )
+            
+            return Response({'status': 'User banned successfully'})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class UserUnbanView(APIView):
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request, pk, format=None):
+        try:
+            user = User.objects.get(pk=pk)
+            user.is_active = True
+            user.ban_reason = None
+            user.unban_request_message = None
+            user.save()
+            
+            # Notify the unbanned user
+            Notification.objects.create(
+                recipient=user,
+                notification_type='system',
+                message="Account Restored: Your account suspension has been lifted by an Admin. Welcome back!"
+            )
+            
+            return Response({'status': 'User unbanned successfully'})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class UserUnbanRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        user = request.user
+        if user.is_active:
+            return Response({'error': 'Account is already active'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        unban_request_message = request.data.get('unban_request_message')
+        if not unban_request_message:
+            return Response({'error': 'Unban request message is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user.unban_request_message = unban_request_message
+        user.save()
+        
+        # Notify all superadmins
+        superadmins = User.objects.filter(role='superadmin')
+        for admin in superadmins:
+            Notification.objects.create(
+                recipient=admin,
+                notification_type='system',
+                message=f"New Unban Request: User {user.name} ({user.email}) has appealed their suspension: '{unban_request_message}'"
+            )
+            
+        return Response({'status': 'Unban request submitted successfully'})

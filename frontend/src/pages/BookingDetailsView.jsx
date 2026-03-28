@@ -2,14 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
-const TIME_LABELS = Array.from({ length: 24 }).map((_, i) =>
-    `${i.toString().padStart(2, '0')}:00`
-);
+// 12-hour labels to match booking page
+const TIME_LABELS = [
+    '12 AM', '1 AM', '2 AM', '3 AM', '4 AM', '5 AM', '6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM',
+    '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM', '8 PM', '9 PM', '10 PM', '11 PM'
+];
 
 const getVisibilityColor = (hour) => {
-    if (hour >= 8 && hour <= 20) return '#FEF3C7'; // Peak
-    if (hour >= 6 && hour <= 23) return '#E0F2FE'; // Mid
-    return '#F3F4F6'; // Low
+    if ((hour >= 8 && hour <= 10) || (hour >= 16 && hour <= 18)) return '#f5e6bfff'; // Peak (Amber-ish)
+    if (hour >= 11 && hour <= 15) return '#d6dee6ff'; // Midday (Blue-ish)
+    return '#ffffff'; // Off-peak (White)
 };
 
 const BookingDetailsView = () => {
@@ -20,6 +22,7 @@ const BookingDetailsView = () => {
 
     useEffect(() => {
         const fetchBooking = async () => {
+            if (!id) return;
             try {
                 // Try to find the booking from advertiser endpoint
                 let found = null;
@@ -187,70 +190,83 @@ const BookingDetailsView = () => {
                     </div>
                 </div>
 
-                {/* Heatmap Section */}
-                <div>
-                    <h4 style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '700', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        Schedule Heatmap
-                    </h4>
-                    <div style={{ overflowX: 'auto', paddingBottom: '15px', background: '#fff', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '24px' }}>
-                        <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr>
-                                    <th style={{ width: '120px' }}></th>
-                                    {TIME_LABELS.map((label, i) => (
-                                        <th key={i} style={{ fontSize: '10px', color: '#6B7280', paddingBottom: '12px', minWidth: '35px', fontWeight: '500' }}>{label}</th>
+                {/* Step 2: Heatmap Scheduler (Premium Replicated) */}
+                <div style={{ background: '#fff', borderRadius: '32px', padding: '32px', border: '1.5px solid #F3F4F6', boxShadow: '0 10px 40px rgba(0,0,0,0.03)' }}>
+                    {dateRange.length > 0 ? (
+                        <section style={{ position: 'relative' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                <h3 style={{ fontSize: '20px', fontWeight: '800', fontFamily: 'Outfit, sans-serif', color: '#111827' }}>Schedule Heatmap</h3>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {[
+                                        { label: 'Prime', color: '#fffbf0', border: '#fef3c7' },
+                                        { label: 'Full', color: '#fef2f2', border: '#fee2e2' },
+                                        // { label: 'Blocked', color: '#f3f4f6', border: '#e5e7eb' },
+                                        { label: 'Selected', color: '#667B68', border: '#667B68' },
+                                    ].map((item, i) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '8px', border: `1px solid ${item.border}`, background: item.color, fontSize: '10px', fontWeight: '700', color: item.color === '#667B68' ? '#fff' : '#6B7280' }}>
+                                            {item.label}
+                                        </div>
                                     ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {dateRange.map(date => (
-                                    <tr key={date}>
-                                        <td style={{ fontSize: '13px', fontWeight: '600', color: '#374151', padding: '10px 16px 10px 0', whiteSpace: 'nowrap' }}>
-                                            {new Date(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                                        </td>
-                                        {Array.from({ length: 24 }).map((_, hour) => {
-                                            const freq = slotMap[date]?.[hour];
-                                            const isSelected = freq !== undefined;
-                                            return (
-                                                <td
-                                                    key={hour}
-                                                    style={{
-                                                        height: '32px',
-                                                        borderRadius: '4px',
-                                                        border: isSelected ? '1px solid #374151' : '1px solid #F3F4F6',
-                                                        background: isSelected ? '#3B82F6' : getVisibilityColor(hour),
-                                                        opacity: isSelected ? 1 : 0.4,
-                                                        padding: 0,
-                                                        transition: 'all 0.2s',
-                                                        cursor: isSelected ? 'pointer' : 'default'
-                                                    }}
-                                                    title={date + " " + TIME_LABELS[hour] + (isSelected ? ": " + freq + "x Frequency" : "")}
-                                                >
-                                                    {isSelected && (
-                                                        <div style={{ color: '#fff', fontSize: '10px', fontWeight: 'bold', textAlign: 'center' }}>
-                                                            {freq}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </div>
+                            </div>
 
-                        <div style={{ display: 'flex', gap: '20px', marginTop: '20px', fontSize: '12px', color: '#6B7280', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <div style={{ width: '12px', height: '12px', background: '#3B82F6', borderRadius: '2px' }}></div>
-                                Active Slot (Frequency)
+                            <div style={{ background: '#fafafa', padding: '20px', borderRadius: '20px', border: '1px solid #f1f1f1' }}>
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '4px' }}>
+                                        <thead>
+                                            <tr>
+                                                <th style={{ width: '110px' }}></th>
+                                                {Array.from({ length: 24 }).map((_, i) => (
+                                                    <th key={i} style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '600', paddingBottom: '12px' }}>{TIME_LABELS[i]}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {dateRange.map(date => (
+                                                <tr key={date}>
+                                                    <td style={{ fontSize: '13px', fontWeight: '700', color: '#374151', padding: '10px 0' }}>
+                                                        {new Date(date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                                                    </td>
+                                                    {Array.from({ length: 24 }).map((_, hour) => {
+                                                        const freq = slotMap[date]?.[hour];
+                                                        const isSelected = freq !== undefined;
+
+                                                        return (
+                                                            <td
+                                                                key={hour}
+                                                                style={{
+                                                                    height: '36px',
+                                                                    minWidth: '28px',
+                                                                    borderRadius: '7px',
+                                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                                    border: isSelected ? '1.5px solid #2d342e' : '1px solid #E5E7EB',
+                                                                    background: isSelected ? '#667B68' : getVisibilityColor(hour),
+                                                                    position: 'relative',
+                                                                    cursor: 'default'
+                                                                }}
+                                                                title={`${date} ${TIME_LABELS[hour]}${isSelected ? `\nPlays: ${freq}x` : ''}`}
+                                                            >
+                                                                {isSelected && <div style={{ color: '#fff', fontSize: '10px', fontWeight: '800', textAlign: 'center' }}>{freq}x</div>}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <div style={{ width: '12px', height: '12px', background: '#FEF3C7', borderRadius: '2px' }}></div>
-                                Peak Hours (8am-8pm)
-                            </div>
+                            <p style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '20px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ color: '#667B68' }}>💡</span> <strong>Insight:</strong> The heatmap visualizes the exact timeline of your advertisement plays as per the finalized booking.
+                            </p>
+                        </section>
+                    ) : (
+                        <div style={{ padding: '80px 40px', textAlign: 'center', background: '#F9FAFB', borderRadius: '24px', border: '2px dashed #E5E7EB' }}>
+                            <div style={{ fontSize: '32px', marginBottom: '16px' }}>📅</div>
+                            <h4 style={{ margin: '0 0 8px 0', color: '#111827', fontWeight: '700' }}>No Timeline Data</h4>
+                            <p style={{ color: '#9CA3AF', fontSize: '14px', maxWidth: '300px', margin: '0 auto' }}>Wait for the booking details to load or verify the date range for this campaign.</p>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div >

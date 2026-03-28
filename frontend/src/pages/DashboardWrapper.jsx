@@ -5,81 +5,86 @@ import AdvertiserDashboard from './AdvertiserDashboard';
 import OwnerDashboard from './OwnerDashboard';
 
 const DashboardWrapper = () => {
-    const [role, setRole] = useState(null);
-    const [loading, setLoading] = useState(true);
+    // Use localStorage for an immediate role — no race condition
+    const storedRole = localStorage.getItem('role');
+    const [role, setRole] = useState(storedRole);
+    const [loading, setLoading] = useState(!storedRole); // Skip loading if role already known
     const navigate = useNavigate();
     const location = useLocation();
 
     useEffect(() => {
+        // Verify token is still valid and refresh role from API
         const fetchRole = async () => {
             try {
                 const res = await api.get('user/profile/');
-                // Simplify role check - assuming backend returns 'role' field or we derive it
-                // Based on UserProfileSerializer, check what fields are returned.
-                // Assuming 'role' is in the response. If not, we might need to check 'is_admin' etc.
-                // Let's assume the Profile response has 'role'. If not, we might fall back to Advertiser default?
-                // Actually 'user/profile' just returns serialized data.
-                // Let's inspect `UserProfileView` in `account/views.py`.
-                // It uses `UserProfileSerializer`.
-                // If `role` is not there, we must rely on something else.
-                // But `UserRegistrationSerializer` has role.
-
-                // Note: The UserProfileSerializer might strictly return fields. 
-                // We'll trust it returns 'role' or we'll need to update backend.
-                // For now, let's try to access res.data.role.
-                // Actually, account permissions are used in views, so user model definitely has it.
-
-                setRole(res.data.role || 'advertiser'); // Default to advertiser if unknown
+                const fetchedRole = res.data.role || storedRole || 'advertiser';
+                // Update localStorage in case role changed
+                localStorage.setItem('role', fetchedRole);
+                setRole(fetchedRole);
             } catch (error) {
-                console.error("Failed to fetch role", error);
+                console.error("Session invalid, redirecting to login", error);
+                localStorage.clear();
                 navigate('/login');
             } finally {
                 setLoading(false);
             }
         };
         fetchRole();
-    }, [navigate]);
+    }, []); // Only run on mount
 
-    // Handle redirects based on path and role
+    // Handle path-based redirects once we know the role
     useEffect(() => {
-        if (!role || loading) return;
+        if (!role) return;
 
         const path = location.pathname;
 
-        // Legacy /dashboard redirect
+        // Legacy /dashboard redirect → send to portal home
         if (path === '/dashboard') {
             if (role === 'business' || role === 'admin') {
-                navigate('/owner/analytics', { replace: true });
+                navigate('/owner', { replace: true });
             } else {
-                navigate('/advertiser/explore', { replace: true });
+                navigate('/advertiser', { replace: true });
             }
             return;
         }
 
-        // Allow standalone billboard and booking paths to bypass the strict /owner and /advertiser checks
+        // Allow standalone billboard and booking paths for both roles
         if (path.startsWith('/billboard') || path.startsWith('/booking')) {
             return;
         }
 
-        // Ensure users are on the correct portal
-        if ((path.startsWith('/owner') || path === '/owner/profile') && role !== 'business' && role !== 'admin') {
-            navigate('/advertiser/explore', { replace: true });
-        } else if ((path.startsWith('/advertiser') || path === '/advertiser/profile') && (role === 'business' || role === 'admin')) {
-            navigate('/owner/analytics', { replace: true });
+        // Guard: prevent owner from accessing advertiser portal
+        if (path.startsWith('/advertiser') && (role === 'business' || role === 'admin')) {
+            navigate('/owner', { replace: true });
+            return;
         }
-    }, [role, location.pathname, navigate, loading]);
 
-    if (loading) return <div>Loading Dashboard...</div>;
+        // Guard: prevent advertiser from accessing owner portal
+        if (path.startsWith('/owner') && role !== 'business' && role !== 'admin') {
+            navigate('/advertiser', { replace: true });
+            return;
+        }
+    }, [role, location.pathname, navigate]);
 
-    // Determine which dashboard to render based on path
+    // Show loading only if we have no role at all yet
+    if (loading && !role) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ width: '36px', height: '36px', border: '3px solid #E5E7EB', borderTopColor: '#667B68', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                <p style={{ color: '#6B7280', fontWeight: '500' }}>Loading your portal...</p>
+            </div>
+        );
+    }
+
     const path = location.pathname;
 
+    // Render based on current path
     if (path.startsWith('/owner')) {
         return <OwnerDashboard />;
     } else if (path.startsWith('/advertiser')) {
         return <AdvertiserDashboard />;
     } else if (path.startsWith('/billboard') || path.startsWith('/booking')) {
-        // Direct billboard/booking links render the dashboard corresponding to the user's role
         if (role === 'business' || role === 'admin') {
             return <OwnerDashboard />;
         } else {
@@ -87,8 +92,13 @@ const DashboardWrapper = () => {
         }
     }
 
-    // Fallback (should not reach here due to redirects)
-    return <div>Loading...</div>;
+    // Final fallback while redirect fires
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+            <div style={{ width: '36px', height: '36px', border: '3px solid #E5E7EB', borderTopColor: '#667B68', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+    );
 };
 
 export default DashboardWrapper;

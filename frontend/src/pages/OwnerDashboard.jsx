@@ -1,8 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, NavLink } from 'react-router-dom';
 import api from '../services/api';
+import logoImg from '../assets/BimbasetuLogo.png';
 import './AdvertiserDashboard.css'; // Reuse existing styles
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
+
+const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6'];
+
+const CustomPieTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div style={{
+                background: '#fff', padding: '15px', borderRadius: '12px',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.1)', border: 'none'
+            }}>
+                <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#6B7280', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {payload[0].name}
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                     <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: payload[0].payload.fill }} />
+                    <p style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#111827' }}>
+                        {payload[0].value} <span style={{ fontSize: '12px', fontWeight: '500', color: '#9CA3AF' }}>Bookings</span>
+                    </p>
+                </div>
+            </div>
+        );
+    }
+    return null;
+};
+
+const CustomBarTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div style={{
+                background: '#fff', padding: '15px', borderRadius: '12px',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.1)', border: 'none'
+            }}>
+                <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#6B7280', fontWeight: '500' }}>{label}</p>
+                <p style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#111827' }}>
+                    NRs. {payload[0].value.toLocaleString()} <span style={{ fontSize: '12px', fontWeight: '400', color: '#667B68' }}>Revenue</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
+
 import NotificationBell from '../components/Notifications/NotificationBell';
 import './OwnerDashboard.css';
 import BillboardDetails from './BillboardDetails';
@@ -10,6 +53,8 @@ import BillboardBooking from './BillboardBooking';
 import BillboardManage from './BillboardManage';
 import BillboardPlayer from './BillboardPlayer';
 import BookingDetailsView from './BookingDetailsView';
+import Billing from './Billing';
+import Profile from './Profile';
 
 const OccupancyAnalytics = ({ myBillboards = [] }) => {
     const [period, setPeriod] = useState('daily');
@@ -204,6 +249,10 @@ const OwnerDashboard = () => {
         pendingRequests: 0,
         occupancyRate: 0
     });
+    const [chartData, setChartData] = useState({
+        bookingStatus: [],
+        revenueByBB: []
+    });
     const [loading, setLoading] = useState(true);
 
     // Booking Action Modal State
@@ -256,6 +305,35 @@ const OwnerDashboard = () => {
                 totalEarnings: earnings,
                 pendingRequests: pending,
                 occupancyRate: occupancy
+            });
+
+            // Derive Chart Data
+            const bStatuses = bookingsRes.data.reduce((acc, curr) => {
+                const st = curr.booking_status || 'pending';
+                acc[st] = (acc[st] || 0) + 1;
+                return acc;
+            }, {});
+            const bookingStatusData = Object.keys(bStatuses).map(key => ({
+                name: key.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                value: bStatuses[key]
+            }));
+
+            // Revenue By Billboard
+            const bbRevenue = bookingsRes.data.reduce((acc, curr) => {
+                if (['approved', 'paid', 'active'].includes(curr.booking_status)) {
+                    const bbName = curr.billboard_details?.title || 'Billboard #' + curr.billboard;
+                    acc[bbName] = (acc[bbName] || 0) + parseFloat(curr.price_calculated || 0);
+                }
+                return acc;
+            }, {});
+            const revenueByBBData = Object.keys(bbRevenue).map(key => ({
+                name: key,
+                Revenue: bbRevenue[key]
+            }));
+
+            setChartData({
+                bookingStatus: bookingStatusData,
+                revenueByBB: revenueByBBData,
             });
 
             setLoading(false);
@@ -415,7 +493,7 @@ const OwnerDashboard = () => {
             {/* Sidebar */}
             <div className="sidebar">
                 <div className="brand-section">
-                    <h2>Owner Portal</h2>
+                    <img src={logoImg} alt="Bimbasetu Logo" className="brand-logo" style={{ height: '35px', width: 'auto', objectFit: 'contain' }} />
                 </div>
 
                 <nav className="sidebar-nav" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
@@ -556,6 +634,7 @@ const OwnerDashboard = () => {
                             myBillboards={myBillboards}
                             navigate={navigate}
                             getInitials={getInitials}
+                            chartData={chartData}
                         />}
                         {activeTab === 'requests' && <BookingRequests
                             ownerBookings={ownerBookings}
@@ -565,9 +644,6 @@ const OwnerDashboard = () => {
                         {activeTab === 'billboards' && <MyBillboards
                             myBillboards={myBillboards}
                             navigate={navigate}
-                            setEditingBillboard={setEditingBillboard}
-                            setFormData={setFormData}
-                            setShowAddModal={setShowAddModal}
                         />}
                         {activeTab === 'profile' && <Profile />}
                         {activeTab === 'billing' && <Billing />}
@@ -820,7 +896,7 @@ const OwnerDashboard = () => {
     );
 };
 
-const DashboardHome = ({ user, stats, myBillboards, navigate, getInitials }) => (
+const DashboardHome = ({ user, stats, myBillboards, navigate, getInitials, chartData }) => (
     <>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
             <div className="header-left">
@@ -881,139 +957,359 @@ const DashboardHome = ({ user, stats, myBillboards, navigate, getInitials }) => 
         </div>
 
         <OccupancyAnalytics myBillboards={myBillboards} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginTop: '30px' }}>
+            
+            {/* Bookings Status PieChart */}
+            <div className="view-container" style={{ background: '#fff', borderRadius: '24px', padding: '30px', border: '1px solid #F3F4F6', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                <div style={{ marginBottom: '24px' }}>
+                    <h4 style={{ margin: '0', fontSize: '20px', fontWeight: '700', color: '#111827' }}>Bookings Status Distribution</h4>
+                    <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Breakdown of active requests and bookings.</p>
+                </div>
+                <div style={{ height: '280px' }}>
+                    {chartData && chartData.bookingStatus.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={chartData.bookingStatus}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={70}
+                                    outerRadius={100}
+                                    paddingAngle={6}
+                                    dataKey="value"
+                                    stroke="none"
+                                >
+                                    {chartData.bookingStatus.map((entry, index) => {
+                                        const clrMap = { 'Approved': '#10B981', 'Pending': '#F59E0B', 'Rejected': '#EF4444', 'Changes Requested': '#3B82F6', 'Active': '#047857', 'Paid': '#34D399' };
+                                        return <Cell key={`cell-${index}`} fill={clrMap[entry.name] || COLORS[index % COLORS.length]} />;
+                                    })}
+                                </Pie>
+                                <Tooltip content={<CustomPieTooltip />} />
+                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>No bookings found.</div>}
+                </div>
+            </div>
+
+            {/* Revenue By Billboard BarChart */}
+            <div className="view-container" style={{ background: '#fff', borderRadius: '24px', padding: '30px', border: '1px solid #F3F4F6', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                <div style={{ marginBottom: '24px' }}>
+                    <h4 style={{ margin: '0', fontSize: '20px', fontWeight: '700', color: '#111827' }}>Revenue by Billboard (NRs)</h4>
+                    <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Total earnings per physical location.</p>
+                </div>
+                <div style={{ height: '280px' }}>
+                    {chartData && chartData.revenueByBB.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData.revenueByBB} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 13 }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 13 }} tickFormatter={(v) => `NRs. ${v}`} />
+                                <Tooltip cursor={{ fill: '#F9FAFB', radius: 10 }} content={<CustomBarTooltip />} />
+                                <Bar dataKey="Revenue" radius={[10, 10, 10, 10]} barSize={45}>
+                                    {chartData.revenueByBB.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={'#10B981'} fillOpacity={0.9} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>No revenue yet.</div>}
+                </div>
+            </div>
+        </div>
+
     </>
 );
 
-const BookingRequests = ({ ownerBookings, openActionModal, navigate }) => (
-    <div className="view-container">
-        <h3>Booking Requests</h3>
-        <table style={{ width: '100%', marginTop: '20px', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
-            <thead>
-                <tr style={{ textAlign: 'left', color: '#6B7280' }}>
-                    <th style={{ padding: '10px' }}>Campaign</th>
-                    <th>Billboard</th>
-                    <th>Dates</th>
-                    <th>Price</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {ownerBookings.length === 0 ? (
-                    <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center' }}>No booking requests.</td></tr>
-                ) : ownerBookings.map(booking => (
-                    <tr
-                        key={booking.id}
-                        style={{ background: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', cursor: 'pointer' }}
-                        className="table-row-hover"
-                        onClick={() => navigate(`/booking/${booking.id}`)}
-                    >
-                        <td style={{ padding: '16px' }}>{booking.campaign_name || 'Campaign #' + booking.campaign}</td>
-                        <td style={{ padding: '16px' }}>{booking.billboard_details?.title || 'Billboard #' + booking.billboard}</td>
-                        <td style={{ padding: '16px' }}>{booking.start_date} to {booking.end_date}</td>
-                        <td style={{ padding: '16px', fontWeight: 'bold' }}>NRs. {booking.price_calculated}</td>
-                        <td style={{ padding: '16px' }}>
-                            <span style={{
-                                padding: '4px 12px',
-                                borderRadius: '20px',
-                                background: booking.booking_status === 'approved' ? '#DEF7EC' :
-                                    booking.booking_status === 'changes_requested' ? '#E1EFFE' :
-                                        booking.booking_status === 'rejected' ? '#FDE8E8' : '#FFF4CE',
-                                color: booking.booking_status === 'approved' ? '#03543F' :
-                                    booking.booking_status === 'changes_requested' ? '#1E429F' :
-                                        booking.booking_status === 'rejected' ? '#9B1C1C' : '#92400E',
-                                fontSize: '12px', fontWeight: '600'
-                            }}>
-                                {booking.booking_status.replace('_', ' ').toUpperCase()}
-                            </span>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                            {booking.booking_status === 'pending' && (
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            openActionModal(booking.id, 'approve');
-                                        }}
-                                        style={{ padding: '6px 12px', background: '#667B68', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                                    >
-                                        Approve
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            openActionModal(booking.id, 'request_revision');
-                                        }}
-                                        style={{ padding: '8px 16px', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                                    >
-                                        Revision
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            openActionModal(booking.id, 'reject');
-                                        }}
-                                        style={{ padding: '6px 12px', background: '#EF4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                                    >
-                                        Reject
-                                    </button>
-                                </div>
-                            )}
-                            {booking.booking_status === 'changes_requested' && (
-                                <span style={{ fontSize: '13px', color: '#6B7280' }}>Waiting for client revision...</span>
-                            )}
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+const BookingRequests = ({ ownerBookings, openActionModal, navigate }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [sortBy, setSortBy] = useState('Newest');
 
-const MyBillboards = ({ myBillboards, navigate, setEditingBillboard, setFormData, setShowAddModal }) => (
+    const processedRequests = useMemo(() => {
+        let result = [...ownerBookings];
+
+        // 1. Search Filter
+        if (searchTerm.trim() !== '') {
+            const query = searchTerm.toLowerCase();
+            result = result.filter(b =>
+                (b.id && b.id.toString().includes(query)) ||
+                (b.campaign_name && b.campaign_name.toLowerCase().includes(query)) ||
+                (b.billboard_details?.title && b.billboard_details.title.toLowerCase().includes(query))
+            );
+        }
+
+        // 2. Status Filter
+        if (statusFilter !== 'All') {
+            result = result.filter(b => {
+                const normalizedStatus = b.booking_status.replace('_', ' ').toLowerCase();
+                return normalizedStatus === statusFilter.toLowerCase();
+            });
+        }
+
+        // 3. Sorting
+        result.sort((a, b) => {
+            if (sortBy === 'Newest') {
+                return new Date(b.created_at || b.start_date) - new Date(a.created_at || a.start_date);
+            } else if (sortBy === 'Oldest') {
+                return new Date(a.created_at || a.start_date) - new Date(b.created_at || b.start_date);
+            } else if (sortBy === 'AmountHigh') {
+                return parseFloat(b.price_calculated || 0) - parseFloat(a.price_calculated || 0);
+            } else if (sortBy === 'AmountLow') {
+                return parseFloat(a.price_calculated || 0) - parseFloat(b.price_calculated || 0);
+            }
+            return 0;
+        });
+
+        return result;
+    }, [ownerBookings, searchTerm, statusFilter, sortBy]);
+
+    return (
+        <div className="view-container">
+            <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: '#1F2937' }}>Booking Requests</h3>
+                <p style={{ margin: 0, color: '#6B7280', fontSize: '14px' }}>Found {processedRequests.length} matching requests</p>
+            </div>
+
+            {/* Controls Row (Search, Filter, Sort) */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '20px',
+                background: 'white',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1px solid #E5E7EB',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                flexWrap: 'wrap',
+                gap: '16px'
+            }}>
+                <div style={{ position: 'relative', minWidth: '300px', flexGrow: 1, maxWidth: '400px' }}>
+                    <svg style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input
+                        type="text"
+                        placeholder="Search by ID, Campaign, or Billboard..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '10px 12px 10px 40px',
+                            borderRadius: '8px',
+                            border: '1px solid #D1D5DB',
+                            fontSize: '14px',
+                            outline: 'none',
+                            transition: 'border-color 0.2s ease',
+                            boxSizing: 'border-box'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#667B68'}
+                        onBlur={(e) => e.target.style.borderColor = '#D1D5DB'}
+                    />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label style={{ fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>Status:</label>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none', background: 'white', cursor: 'pointer' }}
+                        >
+                            <option value="All">All Statuses</option>
+                            <option value="Pending">Pending Approval</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Changes Requested">Changes Requested</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Paid">Paid</option>
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label style={{ fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>Sort:</label>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none', background: 'white', cursor: 'pointer' }}
+                        >
+                            <option value="Newest">Date: Newest First</option>
+                            <option value="Oldest">Date: Oldest First</option>
+                            <option value="AmountHigh">Amount: High to Low</option>
+                            <option value="AmountLow">Amount: Low to High</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div className="table-container" style={{ borderRadius: '12px', border: '1px solid #E5E7EB', overflow: 'hidden', background: '#fff' }}>
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 0' }}>
+                    <thead>
+                        <tr style={{ textAlign: 'left', color: '#6B7280', background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                            <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Campaign</th>
+                            <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Billboard</th>
+                            <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dates</th>
+                            <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Price</th>
+                            <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                            <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {processedRequests.length === 0 ? (
+                            <tr>
+                                <td colSpan="6" style={{ padding: '60px 20px', textAlign: 'center', color: '#6B7280' }}>
+                                    <svg style={{ display: 'block', margin: '0 auto 16px', color: '#D1D5DB' }} width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                    <div style={{ fontSize: '16px', fontWeight: '500', color: '#4B5563' }}>No requests found</div>
+                                    <div style={{ fontSize: '14px' }}>Try adjusting your search or filters.</div>
+                                </td>
+                            </tr>
+                        ) : processedRequests.map(booking => (
+                            <tr
+                                key={booking.id}
+                                style={{ borderBottom: '1px solid #F3F4F6', cursor: 'pointer', transition: 'background-color 0.2s ease' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                onClick={() => navigate(`/booking/${booking.id}`)}
+                            >
+                                <td style={{ padding: '16px 20px' }}>
+                                    <div style={{ fontWeight: '600', color: '#1F2937' }}>{booking.campaign_name || 'Campaign #' + booking.campaign}</div>
+                                    <div style={{ fontSize: '12px', color: '#9CA3AF' }}>ID: #{booking.id.toString().padStart(5, '0')}</div>
+                                </td>
+                                <td style={{ padding: '16px 20px' }}>
+                                    <div style={{ fontSize: '14px', color: '#374151' }}>{booking.billboard_details?.title || 'Billboard #' + booking.billboard}</div>
+                                </td>
+                                <td style={{ padding: '16px 20px' }}>
+                                    <div style={{ fontSize: '14px', color: '#374151' }}>{booking.start_date}</div>
+                                    <div style={{ fontSize: '12px', color: '#9CA3AF' }}>to {booking.end_date}</div>
+                                </td>
+                                <td style={{ padding: '16px 20px', fontWeight: '700', color: '#111827' }}>NRs. {parseFloat(booking.price_calculated).toLocaleString()}</td>
+                                <td style={{ padding: '16px 20px' }}>
+                                    <span style={{
+                                        padding: '4px 12px',
+                                        borderRadius: '20px',
+                                        background: booking.booking_status === 'approved' ? '#DEF7EC' :
+                                            booking.booking_status === 'changes_requested' ? '#E1EFFE' :
+                                                booking.booking_status === 'rejected' ? '#FDE8E8' :
+                                                    ['paid', 'active'].includes(booking.booking_status) ? '#D1FAE5' : '#FFF4CE',
+                                        color: booking.booking_status === 'approved' ? '#03543F' :
+                                            booking.booking_status === 'changes_requested' ? '#1E429F' :
+                                                booking.booking_status === 'rejected' ? '#9B1C1C' :
+                                                    ['paid', 'active'].includes(booking.booking_status) ? '#065F46' : '#92400E',
+                                        fontSize: '11px', fontWeight: '700', textTransform: 'uppercase'
+                                    }}>
+                                        {booking.booking_status.replace('_', ' ')}
+                                    </span>
+                                </td>
+                                <td style={{ padding: '16px 20px' }}>
+                                    {booking.booking_status === 'pending' ? (
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openActionModal(booking.id, 'approve');
+                                                }}
+                                                style={{ padding: '6px 12px', background: '#667B68', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}
+                                            >
+                                                Approve
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openActionModal(booking.id, 'request_revision');
+                                                }}
+                                                style={{ padding: '6px 12px', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}
+                                            >
+                                                Revise
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Managed</span>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+const MyBillboards = ({ myBillboards, navigate }) => (
     <div className="view-container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3>My Billboards</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div>
+                <h3 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: '#1F2937' }}>My Billboards</h3>
+                <p style={{ margin: '4px 0 0 0', color: '#6B7280', fontSize: '14px' }}>{myBillboards.length} billboard{myBillboards.length !== 1 ? 's' : ''} listed</p>
+            </div>
             <button
                 className="btn-primary"
-                onClick={() => {
-                    setEditingBillboard(null);
-                    setFormData({ title: '', location: '', base_price: '', size: '', display_type: 'Digital', visibility_score: 5, traffic_density: 'Medium' });
-                    setShowAddModal(true);
-                }}
+                onClick={() => navigate('/owner/billboard/add')}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '14px', fontWeight: '700', fontSize: '14px' }}
             >
-                + Add New Billboard
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Add New Billboard
             </button>
         </div>
 
         <div className="billboards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginTop: '20px' }}>
-            {myBillboards.length === 0 ? <p>No billboards found.</p> : myBillboards.map(bb => (
-                <div key={bb.id} className="billboard-card" style={{ padding: '20px', background: '#fff', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: 10, right: 10 }}>
-                        <span style={{ fontSize: '12px', padding: '4px 8px', borderRadius: '12px', background: bb.status === 'approved' ? '#d1fae5' : '#fffbeb', color: bb.status === 'approved' ? '#065f46' : '#92400E' }}>
-                            {bb.status}
+            {myBillboards.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '80px 40px', background: '#F9FAFB', borderRadius: '20px', border: '2px dashed #E5E7EB' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '16px' }}>🏙️</div>
+                    <h4 style={{ margin: '0 0 8px 0', color: '#111827', fontWeight: '700' }}>No billboards yet</h4>
+                    <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '24px' }}>Add your first billboard to start earning.</p>
+                    <button onClick={() => navigate('/owner/billboard/add')} className="btn-primary" style={{ padding: '12px 28px', borderRadius: '14px', fontWeight: '700' }}>+ Add Billboard</button>
+                </div>
+            ) : myBillboards.map(bb => (
+                <div key={bb.id} className="billboard-card" style={{ padding: '0', background: '#fff', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', position: 'relative', overflow: 'hidden', border: '1px solid #F3F4F6', transition: 'box-shadow 0.2s, transform 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.10)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'none'; }}
+                >
+                    {/* Status Badge */}
+                    <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
+                        <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', fontWeight: '700', background: bb.status === 'approved' ? '#DEF7EC' : bb.status === 'rejected' ? '#FEF2F2' : '#FEF3C7', color: bb.status === 'approved' ? '#03543F' : bb.status === 'rejected' ? '#991B1B' : '#92400E', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                            {bb.status === 'rejected' ? 'Changes Requested' : bb.status || 'pending'}
                         </span>
                     </div>
-                    <div style={{ height: '140px', background: '#f3f4f6', borderRadius: '8px', marginBottom: '12px', overflow: 'hidden' }}>
+
+                    {/* Image */}
+                    <div style={{ height: '160px', background: '#F3F4F6', overflow: 'hidden' }}>
                         {bb.image ? (
-                            <img src={bb.image} alt={bb.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={bb.image} alt={bb.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s' }} />
                         ) : (
-                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '13px' }}>
-                                No Image
-                            </div>
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: '32px' }}>🖼️</div>
                         )}
                     </div>
-                    <h4 style={{ margin: '0 0 8px 0', color: '#1F2937' }}>{bb.title}</h4>
-                    <p style={{ margin: '0 0 4px 0', color: '#6B7280', fontSize: '14px' }}>{bb.location}</p>
-                    <p style={{ margin: '0 0 12px 0', color: '#374151', fontSize: '15px', fontWeight: 'bold' }}>NRs. {bb.base_price}/day</p>
 
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button
-                            onClick={() => navigate(`/billboard-manage/${bb.id}`)}
-                            style={{ flex: 1, padding: '10px', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
-                        >
-                            Manage Billboard
-                        </button>
+                    {/* Info */}
+                    <div style={{ padding: '16px' }}>
+                        <h4 style={{ margin: '0 0 4px 0', color: '#1F2937', fontWeight: '700', fontSize: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bb.title}</h4>
+                        <p style={{ margin: '0 0 4px 0', color: '#6B7280', fontSize: '13px' }}>{bb.location}</p>
+                        <p style={{ margin: '0 0 16px 0', color: '#667B68', fontSize: '15px', fontWeight: '800' }}>NRs. {bb.base_price}<span style={{ fontSize: '12px', fontWeight: '500', color: '#9CA3AF' }}>/day</span></p>
+
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                                onClick={() => navigate(`/billboard-manage/${bb.id}`)}
+                                style={{ flex: 1, padding: '10px', background: '#667B68', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', transition: 'background 0.2s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#4A5E4C'}
+                                onMouseLeave={e => e.currentTarget.style.background = '#667B68'}
+                            >
+                                Manage
+                            </button>
+                            <button
+                                onClick={() => navigate(`/owner/billboard/edit/${bb.id}`)}
+                                style={{ flex: 1, padding: '10px', background: '#F3F4F6', color: '#374151', border: '1px solid #E5E7EB', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', transition: 'all 0.2s' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#E5E7EB'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#F3F4F6'; }}
+                            >
+                                Edit
+                            </button>
+                        </div>
+                        
+                        {bb.status === 'rejected' && bb.feedback_message && (
+                            <div style={{ marginTop: '16px', padding: '12px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', fontSize: '12px', color: '#991B1B' }}>
+                                <strong>Feedback:</strong> {bb.feedback_message}
+                            </div>
+                        )}
                     </div>
                 </div>
             ))}

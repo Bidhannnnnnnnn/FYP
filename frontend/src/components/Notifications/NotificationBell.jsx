@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 const NotificationBell = () => {
@@ -6,6 +7,7 @@ const NotificationBell = () => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const dropdownRef = useRef(null);
+    const navigate = useNavigate();
 
     const fetchNotifications = async () => {
         try {
@@ -45,6 +47,23 @@ const NotificationBell = () => {
             fetchNotifications();
         } catch (err) {
             console.error("Failed to mark notification as read", err);
+        }
+    };
+
+    const handleNotificationClick = async (n) => {
+        // Mark as read immediately
+        if (!n.is_read) {
+            await markAsRead(n.id);
+        }
+        setShowDropdown(false);
+
+        // Routing logic
+        if (n.notification_type === 'booking_request' || n.notification_type === 'booking_update') {
+            if (n.target_id) navigate(`/booking/${n.target_id}`);
+        } else if (n.notification_type === 'billboard_update') {
+            if (n.target_id) navigate(`/billboard-manage/${n.target_id}`);
+        } else if (n.notification_type === 'system') {
+            // Optional: navigate('/profile') or similar, else do nothing specific
         }
     };
 
@@ -110,7 +129,7 @@ const NotificationBell = () => {
                             notifications.map(n => (
                                 <div
                                     key={n.id}
-                                    onClick={() => markAsRead(n.id)}
+                                    onClick={() => handleNotificationClick(n)}
                                     style={{
                                         padding: '16px 20px', borderBottom: '1px solid #f9fafb',
                                         cursor: 'pointer', transition: 'background 0.2s',
