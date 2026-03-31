@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, NavLink } from 'react-router-dom';
 import api from '../../services/api';
 import './Admin.css';
+import { Book, Building, Folder, Image, MapPin, Phone } from 'lucide-react';
 
 const AdminBillboardDetail = () => {
     const { id } = useParams();
@@ -253,7 +254,7 @@ const AdminBillboardDetail = () => {
                             
                             {!billboard.documents || billboard.documents.length === 0 ? (
                                 <div style={{ textAlign: 'center', padding: '32px 20px', background: '#F9FAFB', borderRadius: '16px', border: '1.5px dashed #E5E7EB' }}>
-                                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>📁</div>
+                                    <div style={{ fontSize: '24px', marginBottom: '8px' }}><Folder width={20} height={20} /></div>
                                     <p style={{ margin: 0, fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>No legal documents uploaded yet.</p>
                                 </div>
                             ) : (
@@ -263,7 +264,7 @@ const AdminBillboardDetail = () => {
                                             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--admin-primary-green)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                                             onMouseLeave={e => { e.currentTarget.style.borderColor = '#F3F4F6'; e.currentTarget.style.transform = 'none'; }}>
                                             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: doc.file?.toLowerCase().endsWith('.pdf') ? '#FEF2F2' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
-                                                {doc.file?.toLowerCase().endsWith('.pdf') ? '📕' : '🖼️'}
+                                                {doc.file?.toLowerCase().endsWith('.pdf') ? '<Book width={20} height={20} />' : '<Image width={20} height={20} />'}
                                             </div>
                                             <div style={{ flex: 1, overflow: 'hidden' }}>
                                                 <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -418,19 +419,19 @@ const AdminBillboardDetail = () => {
                                 <div style={{ display: 'grid', gap: '12px' }}>
                                     {billboard.owner?.phone_number && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px' }}>
-                                            <span style={{ color: '#9CA3AF' }}>📞</span>
+                                            <span style={{ color: '#9CA3AF' }}><Phone width={20} height={20} /></span>
                                             <span style={{ fontWeight: '600', color: '#374151' }}>{billboard.owner.phone_number}</span>
                                         </div>
                                     )}
                                     {billboard.owner?.company_name && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px' }}>
-                                            <span style={{ color: '#9CA3AF' }}>🏢</span>
+                                            <span style={{ color: '#9CA3AF' }}><Building width={20} height={20} /></span>
                                             <span style={{ fontWeight: '600', color: '#374151' }}>{billboard.owner.company_name}</span>
                                         </div>
                                     )}
                                     {billboard.owner?.address && (
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '13px' }}>
-                                            <span style={{ color: '#9CA3AF', marginTop: '2px' }}>📍</span>
+                                            <span style={{ color: '#9CA3AF', marginTop: '2px' }}><MapPin width={20} height={20} /></span>
                                             <span style={{ color: '#4B5563', lineHeight: '1.4' }}>{billboard.owner.address}</span>
                                         </div>
                                     )}

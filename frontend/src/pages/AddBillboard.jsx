@@ -3,12 +3,13 @@ import { useNavigate, useParams, NavLink } from 'react-router-dom';
 import api from '../services/api';
 import { validatePrice } from '../utils/validation';
 import './AdvertiserDashboard.css';
+import { Book, Building, Camera, Check, CheckCircle, ClipboardList, DollarSign, File, Image, Map, MapPin, Scale, Sparkles, XCircle, Zap } from 'lucide-react';
 
 const STEP_CONFIG = [
-    { id: 1, label: 'General Info', icon: '📋' },
-    { id: 2, label: 'Specs & Pricing', icon: '💰' },
-    { id: 3, label: 'Visuals & Location', icon: '🗺️' },
-    { id: 4, label: 'Legal Clearance', icon: '⚖️' },
+    { id: 1, label: 'General Info', icon: <ClipboardList width={20} height={20} /> },
+    { id: 2, label: 'Specs & Pricing', icon: <DollarSign width={20} height={20} /> },
+    { id: 3, label: 'Visuals & Location', icon: <Map width={20} height={20} /> },
+    { id: 4, label: 'Legal Clearance', icon: <Scale width={20} height={20} /> },
 ];
 
 const densityMap = { Low: 1, Medium: 5, High: 10 };
@@ -54,6 +55,7 @@ const AddBillboard = () => {
         base_price: '', size: '',
         display_type: 'Digital', traffic_density: 'Medium',
         visibility_score: 5, weekend_multiplier: 0.80, location_tier: 'standard',
+        booking_lead_days: 2,
         latitude: '', longitude: '',
         image: null,
     });
@@ -77,6 +79,7 @@ const AddBillboard = () => {
                     visibility_score: b.visibility_score || 5,
                     weekend_multiplier: b.weekend_multiplier || 0.80,
                     location_tier: b.location_tier || 'standard',
+                    booking_lead_days: b.booking_lead_days ?? 2,
                     latitude: b.latitude || '',
                     longitude: b.longitude || '',
                     image: null,
@@ -257,7 +260,7 @@ const AddBillboard = () => {
                 {/* Toast */}
                 {toast.show && (
                     <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, background: toast.type === 'success' ? '#10B981' : '#EF4444', color: '#fff', padding: '16px 24px', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: '700', fontSize: '15px', animation: 'slideIn 0.3s ease' }}>
-                        <span style={{ fontSize: '18px' }}>{toast.type === 'success' ? '✅' : '❌'}</span>
+                        <span style={{ fontSize: '18px' }}>{toast.type === 'success' ? <CheckCircle width={20} height={20} /> : '<XCircle width={20} height={20} />'}</span>
                         {toast.message}
                     </div>
                 )}
@@ -274,7 +277,7 @@ const AddBillboard = () => {
                         </button>
                         <div>
                             <h1 style={{ margin: 0, fontSize: '26px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>
-                                {editId ? '✨ Edit Billboard' : '🏙️ List a Billboard'}
+                                {editId ? <Sparkles width={20} height={20} /> : <Building width={20} height={20} />} List a Billboard
                             </h1>
                             <p style={{ margin: 0, fontSize: '13px', color: '#9CA3AF', fontWeight: '500' }}>
                                 {editId ? 'Update your existing listing.' : 'Add your billboard to the Bimbasetu marketplace.'}
@@ -290,7 +293,7 @@ const AddBillboard = () => {
                                     onClick={() => s.id < step ? setStep(s.id) : null}
                                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', background: step === s.id ? '#667B68' : step > s.id ? '#D1FADF' : '#F3F4F6', color: step === s.id ? '#fff' : step > s.id ? '#166534' : '#9CA3AF', fontSize: '12px', fontWeight: '700', cursor: s.id < step ? 'pointer' : 'default', transition: 'all 0.3s' }}
                                 >
-                                    <span>{step > s.id ? '✓' : s.icon}</span>
+                                    <span>{step > s.id ? <Check width={16} height={16} /> : s.icon}</span>
                                     <span>{s.label}</span>
                                 </div>
                                 {i < STEP_CONFIG.length - 1 && (
@@ -308,7 +311,7 @@ const AddBillboard = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             <div style={{ background: '#fff', borderRadius: '28px', padding: '40px', border: '1.5px solid #F3F4F6', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #667B68, #4A5E4C)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📋</div>
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #667B68, #4A5E4C)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><ClipboardList width={20} height={20} /></div>
                                     <div>
                                         <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>General Information</h2>
                                         <p style={{ margin: 0, fontSize: '13px', color: '#9CA3AF' }}>Tell advertisers where your billboard is and what makes it stand out.</p>
@@ -339,7 +342,7 @@ const AddBillboard = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                             <div style={{ background: '#fff', borderRadius: '28px', padding: '36px', border: '1.5px solid #F3F4F6', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #F59E0B, #D97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>💰</div>
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #F59E0B, #D97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><DollarSign width={20} height={20} /></div>
                                     <div>
                                         <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Pricing</h3>
                                         <p style={{ margin: 0, fontSize: '12px', color: '#9CA3AF' }}>Set your base daily rate.</p>
@@ -364,7 +367,7 @@ const AddBillboard = () => {
 
                             <div style={{ background: '#fff', borderRadius: '28px', padding: '36px', border: '1.5px solid #F3F4F6', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>⚡</div>
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><Zap width={20} height={20} /></div>
                                     <div>
                                         <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Specifications</h3>
                                         <p style={{ margin: 0, fontSize: '12px', color: '#9CA3AF' }}>Display type and audience reach.</p>
@@ -390,6 +393,11 @@ const AddBillboard = () => {
                                         <span>Low</span><span>Excellent</span>
                                     </div>
                                 </InputField>
+                                <InputField label="Booking Lead Days" required hint="Minimum days in advance advertisers must book. Default is 2.">
+                                    <input name="booking_lead_days" type="number" min="1" max="30" value={formData.booking_lead_days} onChange={handleChange} required style={inputStyle}
+                                        onFocus={e => { e.target.style.borderColor = '#3B82F6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)'; }}
+                                        onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.boxShadow = 'none'; }} />
+                                </InputField>
                             </div>
                         </div>
                     )}
@@ -399,7 +407,7 @@ const AddBillboard = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '24px' }}>
                             <div style={{ background: '#fff', borderRadius: '28px', padding: '36px', border: '1.5px solid #F3F4F6', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🖼️</div>
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><Image width={20} height={20} /></div>
                                     <div>
                                         <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Billboard Image</h3>
                                         <p style={{ margin: 0, fontSize: '12px', color: '#9CA3AF' }}>Upload a clear photo for your listing.</p>
@@ -428,12 +436,12 @@ const AddBillboard = () => {
                                         <>
                                             <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', minHeight: '280px', display: 'block' }} />
                                             <div style={{ position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '8px 20px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', backdropFilter: 'blur(8px)', whiteSpace: 'nowrap' }}>
-                                                📷 Click to change image
+                                                <Camera width={20} height={20} /> Click to change image
                                             </div>
                                         </>
                                     ) : (
                                         <div style={{ pointerEvents: 'none' }}>
-                                            <div style={{ width: '64px', height: '64px', background: '#F3F4F6', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '28px' }}>🖼️</div>
+                                            <div style={{ width: '64px', height: '64px', background: '#F3F4F6', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '28px' }}><Image width={20} height={20} /></div>
                                             <p style={{ margin: 0, fontWeight: '700', color: '#374151', fontSize: '15px' }}>Drop your image here</p>
                                             <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#9CA3AF' }}>or click to browse</p>
                                             <p style={{ margin: '12px 0 0 0', fontSize: '11px', color: '#D1D5DB', fontWeight: '600' }}>PNG, JPG, WEBP — up to 10MB</p>
@@ -444,7 +452,7 @@ const AddBillboard = () => {
 
                             <div style={{ background: '#fff', borderRadius: '28px', padding: '36px', border: '1.5px solid #F3F4F6', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📍</div>
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><MapPin width={20} height={20} /></div>
                                     <div>
                                         <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Location Details & Coordinates</h3>
                                         <p style={{ margin: 0, fontSize: '12px', color: '#9CA3AF' }}>Setting premium tiers boosts dynamic pricing bounds.</p>
@@ -474,7 +482,7 @@ const AddBillboard = () => {
 
                                 {/* Live summary */}
                                 <div style={{ marginTop: '24px', background: 'linear-gradient(135deg, #F0F4F1, #E8F0E8)', borderRadius: '16px', padding: '20px', border: '1px solid #D1E7D2' }}>
-                                    <p style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📋 Summary</p>
+                                    <p style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}><ClipboardList width={20} height={20} /> Summary</p>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         {[
                                             { l: 'Title', v: formData.title || '—' },
@@ -500,7 +508,7 @@ const AddBillboard = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }} className="fade-in">
                             <div style={{ background: '#fff', borderRadius: '28px', padding: '40px', border: '1.5px solid #F3F4F6', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>⚖️</div>
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><Scale width={20} height={20} />️</div>
                                     <div>
                                         <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Legal Clearance</h2>
                                         <p style={{ margin: 0, fontSize: '13px', color: '#9CA3AF' }}>Upload land permits, city council approval, or any legal clearance documents.</p>
@@ -512,7 +520,7 @@ const AddBillboard = () => {
                                         onMouseEnter={e => e.currentTarget.style.borderColor = '#667B68'}
                                         onMouseLeave={e => e.currentTarget.style.borderColor = '#D1D5DB'}>
                                         <input type="file" multiple onChange={handleLegalFileChange} style={{ display: 'none' }} />
-                                        <div style={{ width: '56px', height: '56px', background: '#F3F4F6', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>📄</div>
+                                        <div style={{ width: '56px', height: '56px', background: '#F3F4F6', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}><File width={20} height={20} /></div>
                                         <span style={{ fontWeight: '700', color: '#374151', fontSize: '15px' }}>Click to upload multiple documents</span>
                                         <span style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '6px' }}>PDF, PNG, or JPG accepted</span>
                                     </label>
@@ -523,7 +531,7 @@ const AddBillboard = () => {
                                         <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '700', color: '#111827' }}>Attached Documents ({legalFiles.length})</p>
                                         {legalFiles.map((file, idx) => (
                                             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', background: '#F9FAFB', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
-                                                <div style={{ fontSize: '20px' }}>{file.type.includes('pdf') ? '📕' : '🖼️'}</div>
+                                                <div style={{ fontSize: '20px' }}>{file.type.includes('pdf') ? '<Book width={20} height={20} />' : '<Image width={20} height={20} />'}</div>
                                                 <div style={{ flex: 1, overflow: 'hidden' }}>
                                                     <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{file.name}</p>
                                                     <p style={{ margin: 0, fontSize: '11px', color: '#9CA3AF' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</p>

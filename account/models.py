@@ -53,7 +53,7 @@ class User(AbstractBaseUser):
     ('advertiser', 'Advertiser'),
     )
 
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="business")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="advertiser")
     
     name = models.CharField(max_length=200)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
@@ -79,7 +79,7 @@ class User(AbstractBaseUser):
 
     def has_module_perms(self, app_label):
         "Does the user have permissions to view the app `app_label`?"
-        # Simplest possible answer: Yes, always
+        #Yes, always
         return True
 
     @property
@@ -113,3 +113,24 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.notification_type} for {self.recipient.email}"
+
+
+class BanAppeal(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending Review'),
+        ('rejected', 'Appeal Rejected'),
+        ('approved', 'Appeal Approved - Unbanned'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ban_appeals')
+    appeal_text = models.TextField(help_text="The user's appeal message")
+    admin_response = models.TextField(blank=True, null=True, help_text="Message from the superadmin")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Appeal for {self.user.email} - {self.status}"

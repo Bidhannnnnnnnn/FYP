@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../services/api';
+import { Camera } from 'lucide-react';
 
 const BillboardPlayer = () => {
     const { id } = useParams();
@@ -8,7 +9,9 @@ const BillboardPlayer = () => {
     const [loading, setLoading] = useState(true);
     const [currentTimeInHour, setCurrentTimeInHour] = useState(0);
     const [activeAd, setActiveAd] = useState(null);
+    const [activeSlot, setActiveSlot] = useState(null);
     const [billboard, setBillboard] = useState(null);
+    const [playCount, setPlayCount] = useState({});  // { adId: count } — kept for future use
 
     // 1. Fetch data
     useEffect(() => {
@@ -97,7 +100,9 @@ const BillboardPlayer = () => {
             scheduledSlots.push({
                 ad: slot.ad,
                 start: start,
-                end: end
+                end: end,
+                adSlotIndex: allSlots.filter(s => s.ad.id === slot.ad.id && s.idealStart <= slot.idealStart).length,
+                adTotalSlots: allSlots.filter(s => s.ad.id === slot.ad.id).length
             });
 
             nextAvailableTime = end;
@@ -121,22 +126,32 @@ const BillboardPlayer = () => {
         );
 
         if (currentSlot) {
-            // Only update if it's a DIFFERENT ad ID to avoid re-renders or state triggers
-            // This ensures we don't call setActiveAd(same_ad) every single second
-            if (activeAd?.id !== currentSlot.ad.id) {
+            if (activeAd?.id !== currentSlot.ad.id || activeSlot?.start !== currentSlot.start) {
                 setActiveAd(currentSlot.ad);
+                setActiveSlot(currentSlot);
             }
         } else {
             if (activeAd !== null) setActiveAd(null);
+            if (activeSlot !== null) setActiveSlot(null);
         }
-    }, [playlist, currentTimeInHour, activeAd]);
+    }, [playlist, currentTimeInHour, activeAd, activeSlot]);
 
     if (loading) return <div style={{ background: '#000', color: '#fff', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Initializing Billboard #{id}...</div>;
 
-    return activeAd ? (
-        <AdPlayer activeAd={activeAd} currentTimeInHour={currentTimeInHour} />
-    ) : (
-        <FallbackScreen billboard={billboard} />
+    return (
+        <div style={{ position: 'relative' }}>
+            {activeAd ? (
+                <AdPlayer activeAd={activeAd} currentTimeInHour={currentTimeInHour} />
+            ) : (
+                <FallbackScreen billboard={billboard} />
+            )}
+            {/* Always-visible debug overlay */}
+            <div style={{ position: 'fixed', bottom: '20px', right: '20px', background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '10px 16px', borderRadius: '10px', fontSize: '13px', fontFamily: 'monospace', zIndex: 9999, lineHeight: '1.8' }}>
+                <div>{new Date().toLocaleTimeString()}</div>
+                <div>Sec in hour: {currentTimeInHour}</div>
+                <div>Frequency: {activeSlot ? `${activeSlot.adSlotIndex}/${activeSlot.adTotalSlots}` : 'none'}</div>
+            </div>
+        </div>
     );
 };
 
@@ -154,7 +169,7 @@ const FallbackScreen = ({ billboard }) => (
         fontFamily: "'Outfit', sans-serif",
         textAlign: 'center'
     }}>
-        <div style={{ fontSize: '120px', marginBottom: '20px' }}>📷</div>
+        <div style={{ fontSize: '120px', marginBottom: '20px' }}><Camera width={200} height={200} /></div>
         <h1 style={{ fontSize: '48px', fontWeight: '800', marginBottom: '10px' }}>{billboard?.title}</h1>
         <p style={{ fontSize: '24px', opacity: 0.8, maxWidth: '800px', margin: '0 20px' }}>
             Your Brand Deserves This Spot.
@@ -206,10 +221,7 @@ const AdPlayer = ({ activeAd, currentTimeInHour }) => {
                 </div>
             )}
 
-            {/* Minimal Overlay Info (Owner/Diagnostic Only if needed) */}
-            <div style={{ position: 'absolute', bottom: '20px', right: '20px', color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>
-                {new Date().toLocaleTimeString()} | Sec: {currentTimeInHour}
-            </div>
+            {/* Minimal Overlay Info removed — debug overlay is now always visible */}
         </div>
     );
 };

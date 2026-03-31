@@ -1,0 +1,16 @@
+.\components\Admin\AdminBillboardDetail.jsx: {'📍', '📞', '🏢', '📁', '📕', '🖼'}
+.\components\Admin\AdminUserProfile.jsx: {'📝', '📞', '📊', '🏢', '🖼'}
+.\components\Admin\Billboards.jsx: {'⚠', '✓', '✍', '🔒', '🖼', '✨'}
+.\components\Admin\Bookings.jsx: {'🚫', '✅', '🏁', '📋', '✏', '🗑'}
+.\pages\AddBillboard.jsx: {'🖼', '📍', '⚡', '💰', '⚖', '✓', '📷', '📄', '✨', '📕', '📋', '🏙', '🗺', '❌', '✅'}
+.\pages\AuthPage.jsx: {'📢', '🏙'}
+.\pages\BillboardBooking.jsx: {'📎', '📅', '❌', '💡', '🔐'}
+.\pages\BillboardDetails.jsx: {'📍', '⚡', '📞', '⚠', '🚗', '✓', '📏', '📺', '✉'}
+.\pages\BillboardManage.jsx: {'🔄'}
+.\pages\BillboardPlayer.jsx: {'📷'}
+.\pages\BookingDetailsView.jsx: {'📅', '💡'}
+.\pages\BookingModal.jsx: {'📂'}
+.\pages\Explore.jsx: {'📍', '🚗', '📐', '👁', '📷', '🪧'}
+.\pages\OwnerDashboard.jsx: {'🏙', '🖼', '✨'}
+.\pages\Profile.jsx: {'📝', '📞', '⚠', '🏢', '✓', '🔒', '✅'}
+.\pages\ResetPassword.jsx: {'✓'}

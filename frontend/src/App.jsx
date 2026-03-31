@@ -22,6 +22,7 @@ import BookingDetailsView from './pages/BookingDetailsView';
 import AdminUserProfile from './components/Admin/AdminUserProfile';
 import AddBillboard from './pages/AddBillboard';
 import AdminBillboardDetail from './components/Admin/AdminBillboardDetail';
+import Banned from './pages/Banned';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/banned" element={<Banned />} />
 
         {/* Owner Portal */}
         <Route path="/owner" element={<DashboardWrapper />} />

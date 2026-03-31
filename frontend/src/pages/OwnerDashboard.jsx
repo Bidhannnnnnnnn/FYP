@@ -55,6 +55,7 @@ import BillboardPlayer from './BillboardPlayer';
 import BookingDetailsView from './BookingDetailsView';
 import Billing from './Billing';
 import Profile from './Profile';
+import { Building, Image, Sparkles } from 'lucide-react';
 
 const OccupancyAnalytics = ({ myBillboards = [] }) => {
     const [period, setPeriod] = useState('daily');
@@ -661,7 +662,7 @@ const OwnerDashboard = () => {
                     <div className="modal-content" style={{ maxWidth: '850px', width: '95%' }}>
                         <div className="modal-header">
                             <div>
-                                <h2 style={{ margin: 0 }}>{editingBillboard ? '✨ Refine Billboard' : 'Add New Billboard'}</h2>
+                                <h2 style={{ margin: 0 }}>{editingBillboard ? '<Sparkles width={20} height={20} /> Refine Billboard' : 'Add New Billboard'}</h2>
                                 <p style={{ fontSize: '13px', color: '#666', margin: '4px 0 0 0' }}>Fill in the details to list your billboard on the platform.</p>
                             </div>
                             <button className="close-btn" onClick={() => setShowAddModal(false)}>&times;</button>
@@ -759,7 +760,7 @@ const OwnerDashboard = () => {
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        <div style={{ fontSize: '40px', marginBottom: '10px' }}>🖼️</div>
+                                                        <div style={{ fontSize: '40px', marginBottom: '10px' }}><Image width={20} height={20} /></div>
                                                         <div style={{ fontSize: '14px', fontWeight: '500', color: '#333' }}>Upload Billboard Image</div>
                                                         <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>PNG, JPG up to 10MB</div>
                                                     </>
@@ -1254,7 +1255,7 @@ const MyBillboards = ({ myBillboards, navigate }) => (
         <div className="billboards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginTop: '20px' }}>
             {myBillboards.length === 0 ? (
                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '80px 40px', background: '#F9FAFB', borderRadius: '20px', border: '2px dashed #E5E7EB' }}>
-                    <div style={{ fontSize: '40px', marginBottom: '16px' }}>🏙️</div>
+                    <div style={{ fontSize: '40px', marginBottom: '16px' }}><Building width={20} height={20} />️</div>
                     <h4 style={{ margin: '0 0 8px 0', color: '#111827', fontWeight: '700' }}>No billboards yet</h4>
                     <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '24px' }}>Add your first billboard to start earning.</p>
                     <button onClick={() => navigate('/owner/billboard/add')} className="btn-primary" style={{ padding: '12px 28px', borderRadius: '14px', fontWeight: '700' }}>+ Add Billboard</button>
@@ -1276,7 +1277,7 @@ const MyBillboards = ({ myBillboards, navigate }) => (
                         {bb.image ? (
                             <img src={bb.image} alt={bb.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s' }} />
                         ) : (
-                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: '32px' }}>🖼️</div>
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: '32px' }}><Image width={20} height={20} /></div>
                         )}
                     </div>
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { validatePhone, validatePassword } from '../utils/validation';
 import './Profile.css';
+import { AlertTriangle, Building, Check, CheckCircle, FileText, Lock, Phone } from 'lucide-react';
 
 const Profile = () => {
     const navigate = useNavigate();
@@ -222,7 +223,7 @@ const Profile = () => {
 
             {message.content && (
                 <div style={{ padding: '14px 18px', borderRadius: '14px', marginBottom: '32px', fontSize: '14px', fontWeight: '600', background: message.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: message.type === 'error' ? '#DC2626' : '#059669', border: `1px solid ${message.type === 'error' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {message.type === 'error' ? '⚠️' : '✅'} {message.content}
+                    {message.type === 'error' ? '<AlertTriangle width={20} height={20} />️' : '<CheckCircle width={20} height={20} />'} {message.content}
                 </div>
             )}
 
@@ -233,7 +234,7 @@ const Profile = () => {
                         {/* Company Section */}
                         <div style={{ padding: '32px', background: '#fff', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F0FDF4', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🏢</div>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F0FDF4', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><Building width={20} height={20} /></div>
                                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Business Identity</h3>
                             </div>
                             <div style={{ display: 'grid', gap: '20px' }}>
@@ -251,7 +252,7 @@ const Profile = () => {
                         {/* Contact Section */}
                         <div style={{ padding: '32px', background: '#fff', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#EFF6FF', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📞</div>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#EFF6FF', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><Phone width={20} height={20} /></div>
                                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Personal Contact</h3>
                             </div>
                             <div style={{ display: 'grid', gap: '20px' }}>
@@ -270,7 +271,7 @@ const Profile = () => {
                     {/* Bio Section */}
                     <div style={{ padding: '32px', background: '#fff', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF7ED', color: '#9A3412', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📝</div>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF7ED', color: '#9A3412', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><FileText width={20} height={20} /></div>
                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Professional Biography</h3>
                         </div>
                         <p style={{ margin: 0, fontSize: '16px', color: '#4B5563', lineHeight: '1.8', whiteSpace: 'pre-line', maxWidth: '800px' }}>
@@ -282,7 +283,7 @@ const Profile = () => {
                     <div style={{ marginTop: '20px', padding: '32px', borderRadius: '24px', background: showPasswordForm ? '#fff' : '#F9FAFB', border: '1.5px solid #F3F4F6', transition: 'all 0.3s' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#FEF2F2', color: '#991B1B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>🔒</div>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#FEF2F2', color: '#991B1B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}><Lock width={20} height={20} /></div>
                                 <div>
                                     <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827' }}>Security & Credentials</h3>
                                     <p style={{ margin: 0, fontSize: '14px', color: '#6B7280' }}>Keep your account protected with a strong password.</p>
@@ -361,7 +362,7 @@ const Profile = () => {
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                                     {pwdRules.map(rule => (
                                                         <span key={rule.label} style={{ fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '100px', background: rule.test(newPassword) ? '#ECFDF5' : '#F9FAFB', color: rule.test(newPassword) ? '#059669' : '#9CA3AF', border: `1px solid ${rule.test(newPassword) ? '#D1FAE5' : '#F3F4F6'}`, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            {rule.test(newPassword) ? '✓' : '○'} {rule.label}
+                                                            {rule.test(newPassword) ? '<Check width={16} height={16} />' : '○'} {rule.label}
                                                         </span>
                                                     ))}
                                                 </div>
@@ -392,10 +393,10 @@ const Profile = () => {
                                             </button>
                                         </div>
                                         {confirmPassword && confirmPassword !== newPassword && (
-                                            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#EF4444', fontWeight: '600' }}>⚠ Passwords do not match</p>
+                                            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#EF4444', fontWeight: '600' }}><AlertTriangle width={20} height={20} /> Passwords do not match</p>
                                         )}
                                         {confirmPassword && confirmPassword === newPassword && (
-                                            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#10B981', fontWeight: '600' }}>✓ Passwords match</p>
+                                            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#10B981', fontWeight: '600' }}><Check width={16} height={16} /> Passwords match</p>
                                         )}
                                     </div>
 

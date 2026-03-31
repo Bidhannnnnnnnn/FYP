@@ -5,7 +5,9 @@ import logoImg from '../assets/BimbasetuLogo.png';
 import api from '../services/api';
 import heroImg from '../assets/landing/Durbarmarg.jpg';
 import { validateEmail, validatePassword, validateName } from '../utils/validation';
+import Toast from '../components/Toast';
 import './AuthPage.css';
+import { Building, Megaphone } from 'lucide-react';
 
 const AuthPage = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -43,6 +45,13 @@ const AuthPage = () => {
     const [showSignupPassword, setShowSignupPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+    // Toast state
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const showToast = (message, type = 'success') => {
+        setToast({ show: true, message, type });
+    };
+    const dismissToast = () => setToast({ show: false, message: '', type: 'success' });
+
     const handleLogin = async (e) => {
         e.preventDefault();
         // Clear stale token
@@ -55,14 +64,16 @@ const AuthPage = () => {
             localStorage.setItem('role', response.data.role);
             localStorage.setItem('name', response.data.name);
 
-            if (response.data.role === 'superadmin') {
+            if (response.data.is_active === false) {
+                navigate('/banned');
+            } else if (response.data.role === 'superadmin') {
                 navigate('/admin');
             } else {
                 navigate('/dashboard');
             }
         } catch (error) {
             console.error('Login Failed:', error);
-            alert('Login Failed: ' + (error.response?.data?.errors?.non_field_errors?.[0] || 'Unknown error'));
+            showToast('Login Failed: ' + (error.response?.data?.errors?.non_field_errors?.[0] || 'Invalid credentials.'), 'error');
         }
     };
 
@@ -113,28 +124,40 @@ const AuthPage = () => {
         try {
             const response = await api.post('user/google/', { access_token: credentialResponse.credential });
             console.log('Google Login Success:', response.data);
-            alert('Google Login Successful!');
+            localStorage.setItem('showLoginToast', 'true');
             localStorage.setItem('accessToken', response.data.token.access);
-            localStorage.setItem('role', response.data.role || 'business'); // Default to business if no role returned
+            localStorage.setItem('role', response.data.role || 'business');
             localStorage.setItem('name', response.data.name || 'User');
 
-            if (response.data.role === 'superadmin') {
+            if (response.data.is_active === false) {
+                navigate('/banned');
+            } else if (response.data.role === 'superadmin') {
                 navigate('/admin');
             } else {
                 navigate('/dashboard');
             }
         } catch (error) {
             console.error('Google Login Failed:', error);
-            alert('Google Login Failed.');
+            if (error.response?.status === 404 && error.response?.data?.email) {
+                // Switch to signup flow with pre-filled Google data
+                setIsLogin(false);
+                setSignupEmail(error.response.data.email);
+                if (error.response.data.name) setName(error.response.data.name);
+                setSignupStep(1);
+                showToast('No account found. Your Google details have been pre-filled — complete registration below.', 'info');
+            } else {
+                showToast('Google Sign-In Failed: ' + (error.response?.data?.errors?.token?.[0] || 'Please try again.'), 'error');
+            }
         }
     };
 
     const handleGoogleError = () => {
-        alert('Google Login Failed');
+        showToast('Google Sign-In was cancelled or failed. Please try again.', 'error');
     };
 
     return (
-        <div className="auth-page">
+        <React.Fragment>
+            <div className="auth-page">
             <div className="auth-container">
                 {/* Left Side - Visual */}
                 <div className="auth-visual" style={{ backgroundImage: `url(${heroImg})` }}>
@@ -388,38 +411,122 @@ const AuthPage = () => {
 
                         {signupStep === 3 && (
                             <div className="step-container fade-in">
-                                <div className="form-group">
-                                    <label>What's your primary role?</label>
-                                    <select
-                                        className="form-control"
-                                        value={role}
-                                        onChange={(e) => setRole(e.target.value)}
-                                    >
-                                        <option value="business">Billboard Owner</option>
-                                        <option value="advertiser">Advertiser/Agency</option>
-                                    </select>
+                                {/* Role Selection Cards */}
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ fontSize: '14px', fontWeight: 700, color: '#374151', marginBottom: '12px', display: 'block' }}>What's your primary role?</label>
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        {/* Billboard Owner Card */}
+                                        <div
+                                            onClick={() => setRole('business')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '16px 14px',
+                                                borderRadius: '14px',
+                                                border: role === 'business' ? '2px solid var(--primary-green)' : '1.5px solid #E5E7EB',
+                                                background: role === 'business' ? 'rgba(102,123,104,0.07)' : '#F9FAFB',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.22s ease',
+                                                textAlign: 'center',
+                                                boxShadow: role === 'business' ? '0 0 0 4px rgba(102,123,104,0.12)' : 'none',
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '28px', marginBottom: '8px' }}><Building width={20} height={20} />️</div>
+                                            <div style={{ fontSize: '14px', fontWeight: 700, color: role === 'business' ? 'var(--primary-green)' : '#374151' }}>Billboard Owner</div>
+                                            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px', lineHeight: 1.4 }}>List & manage your billboard spaces</div>
+                                        </div>
+                                        {/* Advertiser Card */}
+                                        <div
+                                            onClick={() => setRole('advertiser')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '16px 14px',
+                                                borderRadius: '14px',
+                                                border: role === 'advertiser' ? '2px solid var(--primary-green)' : '1.5px solid #E5E7EB',
+                                                background: role === 'advertiser' ? 'rgba(102,123,104,0.07)' : '#F9FAFB',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.22s ease',
+                                                textAlign: 'center',
+                                                boxShadow: role === 'advertiser' ? '0 0 0 4px rgba(102,123,104,0.12)' : 'none',
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '28px', marginBottom: '8px' }}><Megaphone width={20} height={20} /></div>
+                                            <div style={{ fontSize: '14px', fontWeight: 700, color: role === 'advertiser' ? 'var(--primary-green)' : '#374151' }}>Advertiser / Agency</div>
+                                            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px', lineHeight: 1.4 }}>Book billboards for your campaigns</div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="form-group checkbox-group">
-                                    <input
-                                        type="checkbox"
-                                        id="tc-auth"
-                                        checked={tc}
-                                        onChange={(e) => setTc(e.target.checked)}
-                                    />
-                                    <label htmlFor="tc-auth">I agree to the Terms & Conditions</label>
+
+                                {/* Terms & Conditions styled toggle */}
+                                <div
+                                    onClick={() => setTc(!tc)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '12px',
+                                        padding: '14px 16px',
+                                        borderRadius: '12px',
+                                        border: tc ? '1.5px solid var(--primary-green)' : '1.5px solid #E5E7EB',
+                                        background: tc ? 'rgba(102,123,104,0.06)' : '#F9FAFB',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        marginBottom: '8px',
+                                    }}
+                                >
+                                    {/* Custom checkbox */}
+                                    <div style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '6px',
+                                        border: tc ? '2px solid var(--primary-green)' : '2px solid #D1D5DB',
+                                        background: tc ? 'var(--primary-green)' : 'white',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
+                                        marginTop: '1px',
+                                        transition: 'all 0.2s ease',
+                                    }}>
+                                        {tc && (
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+                                            I agree to the <span style={{ color: 'var(--primary-green)', textDecoration: 'underline', cursor: 'pointer' }}>Terms & Conditions</span> and <span style={{ color: 'var(--primary-green)', textDecoration: 'underline', cursor: 'pointer' }}>Privacy Policy</span>
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '2px' }}>By registering, you confirm that you've read and accept our policies.</div>
+                                    </div>
                                 </div>
-                                {signupError && <p className="error-text">{signupError}</p>}
+
+                                {signupError && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', background: '#FEF2F2', border: '1px solid #FECACA', marginTop: '8px' }}>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                                        <p style={{ margin: 0, fontSize: '13px', color: '#DC2626', fontWeight: 600 }}>{signupError}</p>
+                                    </div>
+                                )}
+
                                 <div className="step-nav">
-                                    <button className="back-btn" onClick={() => setSignupStep(2)}>Back</button>
-                                    <button 
-                                        className="login-btn" 
+                                    <button className="back-btn" onClick={() => setSignupStep(2)}>← Back</button>
+                                    <button
+                                        className="login-btn"
                                         style={{ flex: 1 }}
                                         onClick={handleSignup}
                                         disabled={isSubmitting || !tc}
+                                        title={!tc ? 'You must agree to the Terms & Conditions to continue' : ''}
                                     >
-                                        {isSubmitting ? 'Registering...' : 'Confirm Signup'}
+                                        {isSubmitting ? (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                                                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                                                </svg>
+                                                Registering...
+                                            </span>
+                                        ) : 'Create Account →'}
                                     </button>
                                 </div>
+                                <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
                             </div>
                         )}
 
@@ -460,6 +567,8 @@ const AuthPage = () => {
                 </div>
             </div>
         </div>
+        <Toast show={toast.show} message={toast.message} type={toast.type} onClose={dismissToast} />
+        </React.Fragment>
     );
 };
 

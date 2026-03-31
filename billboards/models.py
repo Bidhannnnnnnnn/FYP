@@ -25,7 +25,7 @@ class Billboard(models.Model):
     visibility_score = models.PositiveSmallIntegerField(default=1)
     traffic_density = models.PositiveSmallIntegerField(default=1)
 
-    # Dynamic Pricing Enhancements
+    # Dynamic Pricing Engine
     weekend_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=0.80, help_text="Multiplier for weekend pricing (default 0.80)")
     LOCATION_TIER_CHOICES = (
         ('standard', 'Standard (1.0x)'),
@@ -36,6 +36,7 @@ class Billboard(models.Model):
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     feedback_message = models.TextField(blank=True, null=True, help_text="Message from Admin when requesting changes")
+    booking_lead_days = models.PositiveSmallIntegerField(default=2, help_text="Minimum days in advance a booking must be made")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

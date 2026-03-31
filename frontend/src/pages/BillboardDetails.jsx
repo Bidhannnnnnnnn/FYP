@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './AdvertiserDashboard.css';
+import { AlertTriangle, Car, Check, Mail, MapPin, Phone, Ruler, Tv, Zap } from 'lucide-react';
 
 const BillboardDetails = () => {
     const { id } = useParams();
@@ -36,7 +37,7 @@ const BillboardDetails = () => {
 
     if (error) return (
         <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}><AlertTriangle width={20} height={20} />️</div>
             <h3 style={{ color: '#EF4444', marginBottom: '8px' }}>{error}</h3>
             <button onClick={() => navigate(-1)} className="btn-secondary">Go Back</button>
         </div>
@@ -118,9 +119,9 @@ const BillboardDetails = () => {
 
                     <div className="specs-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '48px' }}>
                         {[
-                            { label: 'Display Technology', value: billboard.display_type || 'Static High-Res', icon: '📺' },
-                            { label: 'Asset Dimension', value: billboard.size || '30\' x 10\'', icon: '📏' },
-                            { label: 'Traffic Density', value: billboard.traffic_density || 'High Velocity', icon: '🚗' },
+                            { label: 'Display Technology', value: billboard.display_type || 'Static High-Res', icon: <Tv width={20} height={20} /> },
+                            { label: 'Asset Dimension', value: billboard.size || '30\' x 10\'', icon: <Ruler width={20} height={20} /> },
+                            { label: 'Traffic Density', value: billboard.traffic_density || 'High Velocity', icon: <Car width={20} height={20} /> },
                         ].map((spec, idx) => (
                             <div key={idx} style={{ background: '#fff', padding: '20px', borderRadius: '18px', border: '1.5px solid #F3F4F6' }}>
                                 <div style={{ fontSize: '20px', marginBottom: '12px' }}>{spec.icon}</div>
@@ -168,7 +169,7 @@ const BillboardDetails = () => {
                                         'Illuminated nocturnal exposure'
                                     ].map((point, i) => (
                                         <li key={i} style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
-                                            <span style={{ color: '#667B68' }}>✓</span>
+                                            <span style={{ color: '#667B68' }}><Check width={16} height={16} /></span>
                                             {point}
                                         </li>
                                     ))}
@@ -206,7 +207,7 @@ const BillboardDetails = () => {
                         {/* Secondary Context Card */}
                         <div style={{ marginTop: '24px', padding: '20px', background: '#F0FDF4', borderRadius: '20px', border: '1px solid #DCFCE7' }}>
                             <div style={{ display: 'flex', gap: '12px' }}>
-                                <span style={{ fontSize: '20px' }}>⚡</span>
+                                <span style={{ fontSize: '20px' }}><Zap width={20} height={20} /></span>
                                 <div>
                                     <h5 style={{ margin: '0 0 4px 0', color: '#166534', fontSize: '13px', fontWeight: '700' }}>High Demand Warning</h5>
                                     <p style={{ margin: 0, fontSize: '12px', color: '#15803d', lineHeight: '1.5' }}>
@@ -232,17 +233,17 @@ const BillboardDetails = () => {
                             <div style={{ display: 'grid', gap: '12px' }}>
                                 {billboard.owner?.phone_number && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#4B5563' }}>
-                                        <span style={{ fontSize: '14px' }}>📞</span>
+                                        <span style={{ fontSize: '14px' }}><Phone width={20} height={20} /></span>
                                         <span style={{ fontWeight: '600' }}>{billboard.owner.phone_number}</span>
                                     </div>
                                 )}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#4B5563' }}>
-                                    <span style={{ fontSize: '14px' }}>✉️</span>
+                                    <span style={{ fontSize: '14px' }}><Mail width={20} height={20} /></span>
                                     <span style={{ fontWeight: '600' }}>{billboard.owner?.email}</span>
                                 </div>
                                 {billboard.owner?.address && (
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '12px', color: '#4B5563' }}>
-                                        <span style={{ fontSize: '14px' }}>📍</span>
+                                        <span style={{ fontSize: '14px' }}><MapPin width={20} height={20} /></span>
                                         <span style={{ lineHeight: '1.4' }}>{billboard.owner.address}</span>
                                     </div>
                                 )}

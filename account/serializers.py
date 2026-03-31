@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from account.models import User, Notification
+from account.models import User, Notification, BanAppeal
 from account.utils import Util
 from django.utils.encoding import smart_str, force_bytes, DjangoUnicodeDecodeError
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -41,11 +41,21 @@ class UserLoginSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields=['id', 'email', 'name', 'role', 'phone_number', 'address', 'company_name', 'bio']
+        fields=['id', 'email', 'name', 'role', 'phone_number', 'address', 'company_name', 'bio', 'is_active', 'ban_reason']
         extra_kwargs = {
             'email': {'read_only': True},
-            'role': {'read_only': True}
+            'role': {'read_only': True},
+            'is_active': {'read_only': True},
+            'ban_reason': {'read_only': True}
         }
+
+class BanAppealSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.name', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    class Meta:
+        model = BanAppeal
+        fields = ['id', 'user', 'user_name', 'user_email', 'appeal_text', 'admin_response', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'user_name', 'user_email', 'admin_response', 'status', 'created_at', 'updated_at']
         
 class UserChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(max_length=255, style={'input_type':'password'}, write_only=True)
@@ -88,7 +98,35 @@ class SendPassowrdResetEmailSerializer(serializers.Serializer):
             print('Password reset OTP generated: ', otp)
             
             # Send Email
-            body = f'Your Bimbasetu Password Reset OTP is: {otp}\n\nThis verification code will expire securely in 15 minutes.'
+            body = f"""
+                        <html>
+                          <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+                            <div style="max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; text-align: center;">
+                              <H1>Bimbasetu</H1>
+                              <h2 style="color: #333;">Password Reset Request</h2>
+
+                              <p style="font-size: 16px; color: #555;">
+                                Use the OTP below to reset your password:
+                              </p>
+
+                              <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; margin: 20px 0; color: #2c7be5;">
+                                {otp}
+                              </div>
+
+                              <p style="font-size: 14px; color: #888;">
+                                This code will expire in 15 minutes.
+                              </p>
+
+                              <hr style="margin: 20px 0;">
+
+                              <p style="font-size: 12px; color: #aaa;">
+                                If you didn’t request this, you can safely ignore this email.
+                              </p>
+
+                            </div>
+                          </body>
+                        </html>
+                        """
             data = {
                 'subject': 'Reset Your Password (OTP)',
                 'body': body,

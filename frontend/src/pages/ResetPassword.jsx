@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { validatePassword } from '../utils/validation';
+import Toast from '../components/Toast';
 import './AuthPage.css';
+import { Check } from 'lucide-react';
 
 const ResetPassword = () => {
     const location = useLocation();
@@ -19,6 +21,13 @@ const ResetPassword = () => {
     const [passwordError, setPasswordError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    // Toast notifications
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const showToast = (message, type = 'success') => {
+        setToast({ show: true, message, type });
+    };
+    const dismissToast = () => setToast({ show: false, message: '', type: 'success' });
 
     // Timer logic for OTP
     const [timer, setTimer] = useState(119); // 1:59 in seconds
@@ -90,7 +99,7 @@ const ResetPassword = () => {
             }
         } catch (error) {
             console.error(error);
-            alert('Failed to send OTP to that email.');
+            showToast('Failed to send OTP. Please check your email and try again.', 'error');
         }
     };
 
@@ -103,7 +112,7 @@ const ResetPassword = () => {
             setStep(3); // OTP Verified, move to password reset
         } catch (error) {
             console.error(error);
-            alert('OTP Verification Failed. Please check the code and try again.');
+            showToast('OTP Verification Failed. Please check the code and try again.', 'error');
         }
     };
 
@@ -111,20 +120,21 @@ const ResetPassword = () => {
         e.preventDefault();
         const finalOtp = otp.join('');
         if (password !== confirmPassword) {
-            alert("Passwords do not match!");
+            showToast('Passwords do not match!', 'error');
             return;
         }
         try {
             await api.post(`user/reset-password/`, { email, otp: finalOtp, password, password2: confirmPassword });
-            alert('Password Reset Successful! Please Login with your new password.');
-            navigate('/login');
+            showToast('Password reset successfully! Redirecting to login...', 'success');
+            setTimeout(() => navigate('/login'), 2000);
         } catch (error) {
             console.error('Password Reset Failed:', error);
-            alert('Failed to reset password. OTP may have expired.');
+            showToast('Failed to reset password. OTP may have expired.', 'error');
         }
     };
 
     return (
+        <React.Fragment>
         <div className="login-page">
             <div className="login-card" style={{ height: 'auto', minHeight: '500px' }}>
                 <div className="header">
@@ -208,7 +218,7 @@ const ResetPassword = () => {
                     {/* Step 3: Setup New Password */}
                     {step === 3 && (
                         <form onSubmit={handleResetPassword} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <p style={{ marginBottom: '20px', textAlign: 'center', color: '#10B981', fontWeight: 'bold' }}>✓ OTP Verified</p>
+                            <p style={{ marginBottom: '20px', textAlign: 'center', color: '#10B981', fontWeight: 'bold' }}><Check width={16} height={16} /> OTP Verified</p>
                             <p style={{ marginBottom: '20px', textAlign: 'center' }}>Please set your new password below.</p>
 
                             <div className="form-group">
@@ -285,6 +295,8 @@ const ResetPassword = () => {
                 </div>
             </div>
         </div>
+        <Toast show={toast.show} message={toast.message} type={toast.type} onClose={dismissToast} />
+        </React.Fragment>
     );
 };
 

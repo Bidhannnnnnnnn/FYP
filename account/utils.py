@@ -10,5 +10,6 @@ class Util:
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[data["to_email"]],
         )
+        email.content_subtype = "html"
         email.send(fail_silently=False)
 

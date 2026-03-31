@@ -57,7 +57,7 @@ class BookingListSerializer(serializers.ModelSerializer):
                   'billboard_details', 'start_date', 'end_date', 'price_calculated',
                   'slot_duration_seconds', 'frequency_per_hour', 'slots',
                   'creative_file', 'creative_status', 'booking_status', 'owner_remarks',
-                  'created_at', 'updated_at']
+                  'payment_deadline', 'created_at', 'updated_at']
         read_only_fields = ['price_calculated', 'creative_status', 'booking_status', 
                            'owner_remarks', 'created_at', 'updated_at']
 

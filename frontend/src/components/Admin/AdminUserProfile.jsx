@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import './Admin.css';
+import { BarChart, Building, FileText, Image, Phone } from 'lucide-react';
 
 const AdminUserProfile = () => {
     const { id } = useParams();
@@ -86,7 +87,7 @@ const AdminUserProfile = () => {
                     {/* Company Section */}
                     <div style={{ padding: '32px', background: '#fff', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F0FDF4', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🏢</div>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F0FDF4', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><Building width={20} height={20} /></div>
                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Business Identity</h3>
                         </div>
                         <div style={{ display: 'grid', gap: '20px' }}>
@@ -104,7 +105,7 @@ const AdminUserProfile = () => {
                     {/* Contact Section */}
                     <div style={{ padding: '32px', background: '#fff', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#EFF6FF', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📞</div>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#EFF6FF', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><Phone width={20} height={20} /></div>
                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Personal Contact</h3>
                         </div>
                         <div style={{ display: 'grid', gap: '20px' }}>
@@ -123,7 +124,7 @@ const AdminUserProfile = () => {
                 {/* Bio Section */}
                 <div style={{ padding: '32px', background: '#fff', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF7ED', color: '#9A3412', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📝</div>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF7ED', color: '#9A3412', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><FileText width={20} height={20} /></div>
                         <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Professional Biography</h3>
                     </div>
                     <p style={{ margin: 0, fontSize: '16px', color: '#4B5563', lineHeight: '1.8', whiteSpace: 'pre-line', maxWidth: '800px' }}>
@@ -135,7 +136,7 @@ const AdminUserProfile = () => {
             {user.role === 'business' && (
                 <div style={{ marginTop: '40px', padding: '32px', background: '#fff', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🖼️</div>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><Image width={20} height={20} /></div>
                         <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Associated Billboards</h3>
                     </div>
                     <div className="admin-table-container">
@@ -180,7 +181,7 @@ const AdminUserProfile = () => {
             {user.role === 'user' && (
                 <div style={{ marginTop: '40px', padding: '32px', background: '#fff', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#E0E7FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📊</div>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#E0E7FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><BarChart width={20} height={20} /></div>
                         <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Campaign Bookings</h3>
                     </div>
                     <div className="admin-table-container">

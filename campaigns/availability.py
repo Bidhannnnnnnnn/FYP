@@ -1,4 +1,5 @@
 from django.db.models import Sum
+from django.utils import timezone
 from .models import Booking, BookingSlot
 
 class AvailabilityService:
@@ -6,14 +7,11 @@ class AvailabilityService:
 
     @staticmethod
     def calculate_booked_seconds(billboard_id, date, hour, include_pending=True, exclude_booking_id=None):
-        """
-        Calculates the total seconds booked for a specific billboard, date, and hour.
-        Optionally excludes a specific booking (used when revising an existing booking).
-        """
-        status_filter = ['approved', 'active', 'paid']
+        status_filter = ['paid', 'active']
         if include_pending:
             status_filter += ['pending', 'changes_requested']
-
+        # Include approved only if payment deadline hasn't passed
+        now = timezone.now()
         qs = BookingSlot.objects.filter(
             booking__billboard_id=billboard_id,
             booking__booking_status__in=status_filter,
@@ -21,11 +19,22 @@ class AvailabilityService:
             hour=hour
         ).select_related('booking')
 
+        # Also include approved bookings whose payment deadline hasn't expired yet
+        approved_qs = BookingSlot.objects.filter(
+            booking__billboard_id=billboard_id,
+            booking__booking_status='approved',
+            date=date,
+            hour=hour
+        ).filter(
+            booking__payment_deadline__gt=now
+        ).select_related('booking')
+
         if exclude_booking_id:
             qs = qs.exclude(booking_id=exclude_booking_id)
+            approved_qs = approved_qs.exclude(booking_id=exclude_booking_id)
 
         total_seconds = 0
-        for slot in qs:
+        for slot in list(qs) + list(approved_qs):
             booking = slot.booking
             freq = getattr(slot, 'frequency_per_hour', booking.frequency_per_hour)
             total_seconds += (booking.slot_duration_seconds * freq)

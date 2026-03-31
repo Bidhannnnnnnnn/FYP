@@ -17,6 +17,7 @@ class BillboardCreateSerializer(serializers.ModelSerializer):
             'id','title','location','image','size','display_type',
             'base_price','visibility_score','traffic_density',
             'weekend_multiplier', 'location_tier',
+            'booking_lead_days',
             'description','latitude','longitude','feedback_message',
             'documents'
         ]
@@ -56,6 +57,7 @@ class BillboardListSerializer(serializers.ModelSerializer):
             'id','title','location','image','size','display_type',
             'base_price','visibility_score','traffic_density','status','owner',
             'weekend_multiplier', 'location_tier',
+            'booking_lead_days',
             'description','latitude','longitude','feedback_message',
             'documents'
         ]

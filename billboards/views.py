@@ -187,7 +187,8 @@ class BillboardDeleteView(generics.DestroyAPIView):
 
 class BillboardActiveAdsView(generics.ListAPIView):
     """
-    Returns approved bookings for the current date for a specific billboard.
+    Returns approved bookings for the current date/hour for a specific billboard.
+    Only returns bookings that have a BookingSlot matching today's date and current hour.
     Accessible without authentication for public display.
     """
     serializer_class = BillboardPlayerAdSerializer
@@ -195,14 +196,19 @@ class BillboardActiveAdsView(generics.ListAPIView):
 
     def get_queryset(self):
         billboard_id = self.kwargs.get('pk')
-        today = timezone.now().date()
-        return Booking.objects.filter(
+        now = timezone.localtime(timezone.now())
+        today = now.date()
+        current_hour = now.hour
+        print(f"[Player] billboard={billboard_id} local_now={now} today={today} hour={current_hour}")
+        qs = Booking.objects.filter(
             billboard_id=billboard_id,
-            booking_status='approved',
+            booking_status__in=['paid', 'active'],
             creative_status='approved',
-            start_date__lte=today,
-            end_date__gte=today
-        ).select_related('campaign__advertiser')
+            slots__date=today,
+            slots__hour=current_hour
+        ).distinct().select_related('campaign__advertiser')
+        print(f"[Player] matched bookings: {qs.count()}")
+        return qs
 
 class BillboardReviewListView(generics.ListAPIView):
     serializer_class = BillboardReviewSerializer

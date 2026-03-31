@@ -2,7 +2,8 @@ from django.urls import path, include
 from account.views import (
     UserRegistrationView, UserLoginView, UserProfileView, UserChangePasswordView,
     SendPasswordResetEmailView, VerifyOTPView, UserPasswordResetView, UserListView, GoogleLoginView,
-    NotificationListView, NotificationMarkReadView, UserManageDetailView, UserSignupInviteView
+    NotificationListView, NotificationMarkReadView, UserManageDetailView, UserSignupInviteView,
+    UserBanView, UserUnbanView, UserAppealView, AdminAppealManageView
 )
 
 urlpatterns = [
@@ -41,4 +42,11 @@ urlpatterns = [
     path('notifications/mark-read/<int:pk>/', NotificationMarkReadView.as_view(), name='notifications-mark-read'),
 
     path('google/', GoogleLoginView.as_view(), name='google_login'),
+    
+    # Ban and Appeal
+    path('ban/<int:pk>/', UserBanView.as_view(), name='user-ban'),
+    path('unban/<int:pk>/', UserUnbanView.as_view(), name='user-unban'),
+    path('appeal/', UserAppealView.as_view(), name='user-appeal'),
+    path('manage-appeals/', AdminAppealManageView.as_view(), name='admin-appeal-manage'),
+    path('manage-appeals/<int:pk>/', AdminAppealManageView.as_view(), name='admin-appeal-respond'),
 ]

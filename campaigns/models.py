@@ -73,6 +73,7 @@ class Booking(models.Model):
     # Booking Status
     booking_status = models.CharField(max_length=20, choices=BOOKING_STATUS_CHOICES, default='pending')
     owner_remarks = models.TextField(blank=True, help_text="Owner's feedback or rejection reason")
+    payment_deadline = models.DateTimeField(null=True, blank=True, help_text="Deadline for payment after approval")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { Calendar, Lightbulb } from 'lucide-react';
 
 // 12-hour labels to match booking page
 const TIME_LABELS = [
@@ -9,9 +10,9 @@ const TIME_LABELS = [
 ];
 
 const getVisibilityColor = (hour) => {
-    if ((hour >= 8 && hour <= 10) || (hour >= 16 && hour <= 18)) return '#f5e6bfff'; // Peak (Amber-ish)
-    if (hour >= 11 && hour <= 15) return '#d6dee6ff'; // Midday (Blue-ish)
-    return '#ffffff'; // Off-peak (White)
+    if ((hour >= 8 && hour <= 10) || (hour >= 16 && hour <= 18)) return '#f5e6bfff';
+    if (hour >= 11 && hour <= 15) return '#d6dee6ff';
+    return '#ffffff';
 };
 
 const BookingDetailsView = () => {
@@ -19,36 +20,53 @@ const BookingDetailsView = () => {
     const navigate = useNavigate();
     const [booking, setBooking] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isOwnerView, setIsOwnerView] = useState(false);
 
-    useEffect(() => {
-        const fetchBooking = async () => {
-            if (!id) return;
+    // Action state
+    const [actionLoading, setActionLoading] = useState(false);
+    const [remarks, setRemarks] = useState('');
+    const [showRemarksFor, setShowRemarksFor] = useState(null); // 'reject' | 'revise' | null
+
+    const fetchBooking = async () => {
+        if (!id) return;
+        try {
+            let found = null;
             try {
-                // Try to find the booking from advertiser endpoint
-                let found = null;
-                try {
-                    const res = await api.get('campaigns/bookings/');
-                    found = res.data.find(b => b.id === parseInt(id));
-                } catch (e) {
-                    console.log("Advertiser check failed, moving to owner");
-                }
+                const res = await api.get('campaigns/bookings/');
+                found = res.data.find(b => b.id === parseInt(id));
+            } catch (e) {}
 
-                if (found) {
-                    setBooking(found);
-                } else {
-                    // Try owner endpoint if advertiser fetch didn't yield the booking
-                    const resOwner = await api.get('campaigns/owner-bookings/');
-                    const foundOwner = resOwner.data.find(b => b.id === parseInt(id));
-                    setBooking(foundOwner || null);
-                }
-            } catch (error) {
-                console.error("Failed to fetch booking details", error);
-            } finally {
-                setLoading(false);
+            if (found) {
+                setBooking(found);
+                setIsOwnerView(false);
+            } else {
+                const resOwner = await api.get('campaigns/owner-bookings/');
+                const foundOwner = resOwner.data.find(b => b.id === parseInt(id));
+                setBooking(foundOwner || null);
+                setIsOwnerView(!!foundOwner);
             }
-        };
-        fetchBooking();
-    }, [id]);
+        } catch (error) {
+            console.error("Failed to fetch booking details", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchBooking(); }, [id]);
+
+    const handleAction = async (action) => {
+        setActionLoading(true);
+        try {
+            await api.patch(`campaigns/bookings/${id}/action/`, { action, remarks });
+            setRemarks('');
+            setShowRemarksFor(null);
+            await fetchBooking();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Action failed.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     // Reconstruct selected slots for easy lookup in heatmap
     const slotMap = useMemo(() => {
@@ -190,6 +208,78 @@ const BookingDetailsView = () => {
                     </div>
                 </div>
 
+                {/* Owner Actions */}
+                {isOwnerView && booking_status === 'pending' && (
+                    <div style={{ background: '#F9FAFB', borderRadius: '20px', padding: '28px', border: '1.5px solid #E5E7EB', marginBottom: '32px' }}>
+                        <h4 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '700', color: '#111827' }}>Review this Booking</h4>
+
+                        {showRemarksFor && (
+                            <div style={{ marginBottom: '16px' }}>
+                                <textarea
+                                    value={remarks}
+                                    onChange={(e) => setRemarks(e.target.value)}
+                                    placeholder={showRemarksFor === 'reject' ? 'Reason for rejection...' : 'What changes are needed?'}
+                                    rows={3}
+                                    style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid #E5E7EB', fontSize: '14px', fontFamily: 'Inter, sans-serif', resize: 'vertical', boxSizing: 'border-box' }}
+                                />
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                            <button
+                                onClick={() => handleAction('approve')}
+                                disabled={actionLoading}
+                                style={{ padding: '12px 24px', borderRadius: '12px', border: 'none', background: '#667B68', color: '#fff', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                            >
+                                {actionLoading ? '...' : 'Approve'}
+                            </button>
+
+                            {showRemarksFor === 'revise' ? (
+                                <button
+                                    onClick={() => handleAction('request_revision')}
+                                    disabled={actionLoading || !remarks.trim()}
+                                    style={{ padding: '12px 24px', borderRadius: '12px', border: 'none', background: '#F59E0B', color: '#fff', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                                >
+                                    {actionLoading ? '...' : 'Send Revision Request'}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setShowRemarksFor('revise')}
+                                    style={{ padding: '12px 24px', borderRadius: '12px', border: '1.5px solid #F59E0B', background: '#fff', color: '#B45309', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                                >
+                                    Request Revision
+                                </button>
+                            )}
+
+                            {showRemarksFor === 'reject' ? (
+                                <button
+                                    onClick={() => handleAction('reject')}
+                                    disabled={actionLoading || !remarks.trim()}
+                                    style={{ padding: '12px 24px', borderRadius: '12px', border: 'none', background: '#EF4444', color: '#fff', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                                >
+                                    {actionLoading ? '...' : 'Confirm Rejection'}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setShowRemarksFor('reject')}
+                                    style={{ padding: '12px 24px', borderRadius: '12px', border: '1.5px solid #EF4444', background: '#fff', color: '#EF4444', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                                >
+                                    Reject
+                                </button>
+                            )}
+
+                            {showRemarksFor && (
+                                <button
+                                    onClick={() => { setShowRemarksFor(null); setRemarks(''); }}
+                                    style={{ padding: '12px 24px', borderRadius: '12px', border: '1.5px solid #E5E7EB', background: '#fff', color: '#6B7280', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                                >
+                                    Cancel
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Step 2: Heatmap Scheduler (Premium Replicated) */}
                 <div style={{ background: '#fff', borderRadius: '32px', padding: '32px', border: '1.5px solid #F3F4F6', boxShadow: '0 10px 40px rgba(0,0,0,0.03)' }}>
                     {dateRange.length > 0 ? (
@@ -257,12 +347,12 @@ const BookingDetailsView = () => {
                                 </div>
                             </div>
                             <p style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '20px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ color: '#667B68' }}>💡</span> <strong>Insight:</strong> The heatmap visualizes the exact timeline of your advertisement plays as per the finalized booking.
+                                <span style={{ color: '#667B68' }}><Lightbulb width={20} height={20} /></span> <strong>Insight:</strong> The heatmap visualizes the exact timeline of your advertisement plays as per the finalized booking.
                             </p>
                         </section>
                     ) : (
                         <div style={{ padding: '80px 40px', textAlign: 'center', background: '#F9FAFB', borderRadius: '24px', border: '2px dashed #E5E7EB' }}>
-                            <div style={{ fontSize: '32px', marginBottom: '16px' }}>📅</div>
+                            <div style={{ fontSize: '32px', marginBottom: '16px' }}><Calendar width={20} height={20} /></div>
                             <h4 style={{ margin: '0 0 8px 0', color: '#111827', fontWeight: '700' }}>No Timeline Data</h4>
                             <p style={{ color: '#9CA3AF', fontSize: '14px', maxWidth: '300px', margin: '0 auto' }}>Wait for the booking details to load or verify the date range for this campaign.</p>
                         </div>

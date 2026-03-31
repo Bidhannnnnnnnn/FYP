@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../services/api';
 import './AdvertiserDashboard.css';
+import { Folder } from 'lucide-react';
 
 const BookingModal = ({ billboard, onClose, onSuccess, editMode = false, bookingData = null }) => {
     const [loading, setLoading] = useState(false);
@@ -433,7 +434,7 @@ const BookingModal = ({ billboard, onClose, onSuccess, editMode = false, booking
                                 </div>
                             ) : (
                                 <>
-                                    <div style={{ fontSize: '30px', marginBottom: '8px' }}>📂</div>
+                                    <div style={{ fontSize: '30px', marginBottom: '8px' }}><Folder width={20} height={20} /></div>
                                     <div style={{ fontSize: '13px', fontWeight: '500', color: '#4B5563' }}>Drop your ad here or click to browse</div>
                                     <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>MP4, MOV, JPG, PNG (Max 50MB)</div>
                                 </>

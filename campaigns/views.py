@@ -63,6 +63,15 @@ class BookingCreateView(generics.CreateAPIView):
         slot_duration = serializer.validated_data.get('slot_duration_seconds', 10)
         default_frequency = serializer.validated_data.get('frequency_per_hour', 10)
 
+        # Enforce booking lead days
+        from django.utils import timezone as tz
+        min_start = tz.localdate() + timedelta(days=billboard.booking_lead_days)
+        if start_date < min_start:
+            raise ValidationError(
+                f"Bookings for this billboard must be made at least {billboard.booking_lead_days} day(s) in advance. "
+                f"Earliest allowed start date is {min_start}."
+            )
+
         from datetime import datetime
         flat_slots = []
         for item in slots_json:
@@ -337,6 +346,8 @@ class BookingApprovalView(generics.UpdateAPIView):
             booking.booking_status = 'approved'
             booking.creative_status = 'approved'
             booking.owner_remarks = remarks if remarks else 'Approved'
+            from django.utils import timezone
+            booking.payment_deadline = timezone.now() + timedelta(hours=8)
         elif action == 'reject':
             booking.booking_status = 'rejected'
             booking.creative_status = 'rejected'

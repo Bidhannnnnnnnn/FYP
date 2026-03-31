@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './AdvertiserDashboard.css';
+import { RefreshCw } from 'lucide-react';
 
 const BillboardManage = () => {
     const { id } = useParams();
@@ -443,7 +444,7 @@ const BillboardManage = () => {
                                     {/* Playback Specs */}
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#6B7280' }}>
                                         <span>⏱ {b.slot_duration_seconds}s slot</span>
-                                        <span>🔄 {b.frequency_per_hour}x per hour</span>
+                                        <span><RefreshCw width={20} height={20} /> {b.frequency_per_hour}x per hour</span>
                                     </div>
 
                                     {/* Amount + Status */}

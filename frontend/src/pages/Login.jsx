@@ -23,7 +23,9 @@ const Login = () => {
             localStorage.setItem('showLoginToast', 'true');
 
             const role = response.data.role;
-            if (role === 'advertiser') {
+            if (response.data.is_active === false) {
+                navigate('/banned');
+            } else if (role === 'advertiser') {
                 navigate('/advertiser');
             } else if (role === 'business') {
                 navigate('/owner');

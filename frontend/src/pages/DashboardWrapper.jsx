@@ -18,6 +18,13 @@ const DashboardWrapper = () => {
             try {
                 const res = await api.get('user/profile/');
                 const fetchedRole = res.data.role || storedRole || 'advertiser';
+                
+                // Guard: Catch inactive users who try to bypass via direct URL
+                if (res.data.is_active === false) {
+                    navigate('/banned', { replace: true });
+                    return;
+                }
+
                 // Update localStorage in case role changed
                 localStorage.setItem('role', fetchedRole);
                 setRole(fetchedRole);

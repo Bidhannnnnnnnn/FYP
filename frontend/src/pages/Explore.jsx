@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './AdvertiserDashboard.css';
+import { Camera, Car, Eye, MapPin, Ruler, Signpost } from 'lucide-react';
 
 const Explore = ({ billboards }) => {
     const navigate = useNavigate();
@@ -162,7 +163,7 @@ const Explore = ({ billboards }) => {
             {/* Results Grid */}
             {filteredBillboards.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '80px 20px', background: '#fff', borderRadius: '20px', border: '2px dashed #E5E7EB' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🪧</div>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}><Signpost width={20} height={20} /></div>
                     <h3 style={{ fontSize: '20px', color: '#374151', margin: '0 0 8px 0' }}>No billboards found</h3>
                     <p style={{ color: '#6B7280', margin: 0, fontSize: '15px' }}>Try adjusting your search or filters to see more results.</p>
                 </div>
@@ -202,7 +203,7 @@ const Explore = ({ billboards }) => {
                                         <img src={bb.image} alt={bb.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} className="bb-card-img" />
                                     ) : (
                                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>
-                                            <span style={{ fontSize: '32px' }}>📷</span>
+                                            <span style={{ fontSize: '32px' }}><Camera width={20} height={20} /></span>
                                         </div>
                                     )}
 
@@ -250,20 +251,20 @@ const Explore = ({ billboards }) => {
                                     </div>
 
                                     <p style={{ margin: '0 0 20px 0', color: '#6B7280', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' }}>
-                                        <span style={{ color: '#9CA3AF' }}>📍</span>
+                                        <span style={{ color: '#9CA3AF' }}><MapPin width={20} height={20} /></span>
                                         {bb.location}
                                     </p>
 
                                     {/* Meta Tags Row */}
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 'auto', marginBottom: '24px' }}>
                                         <span style={{ background: '#F3F4F6', color: '#4B5563', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '600' }}>
-                                            📐 {bb.size || 'Standard'}
+                                            <Ruler width={20} height={20} /> {bb.size || 'Standard'}
                                         </span>
                                         <span style={{ background: '#ECFDF5', color: '#059669', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '600' }}>
-                                            🚗 {bb.traffic_density} Traffic
+                                            <Car width={20} height={20} /> {bb.traffic_density} Traffic
                                         </span>
                                         <span style={{ background: '#EFF6FF', color: '#2563EB', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '600' }}>
-                                            👁️ {bb.visibility_score}/10 Visibility
+                                            <Eye width={20} height={20} />️ {bb.visibility_score}/10 Visibility
                                         </span>
                                     </div>
 

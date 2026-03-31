@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import './AdvertiserDashboard.css';
+import { Calendar, Key, Lightbulb, Paperclip, XCircle } from 'lucide-react';
 
 const BillboardBooking = () => {
     const { id } = useParams();
@@ -222,9 +223,12 @@ const BillboardBooking = () => {
     };
 
     const updateSlotFrequency = (date, hour, freq) => {
+        const slotData = availabilityData.find(s => s.date === date && s.hour === hour);
+        const remaining = slotData ? slotData.remaining_seconds : 3600;
+        const maxFreq = Math.max(1, Math.min(60, Math.floor(remaining / slotDuration)));
         setSelectedSlots(prev => ({
             ...prev,
-            [date]: { ...prev[date], [hour]: freq }
+            [date]: { ...prev[date], [hour]: Math.min(Number(freq), maxFreq) }
         }));
     };
 
@@ -232,6 +236,23 @@ const BillboardBooking = () => {
         if (formattedSlots.length === 0) {
             alert("Please select at least one time slot.");
             return;
+        }
+
+        // Guard: each slot's (freq × duration) must not exceed available seconds for that hour
+        for (const date in selectedSlots) {
+            for (const hour in selectedSlots[date]) {
+                const freq = selectedSlots[date][hour];
+                const hr = parseInt(hour);
+                const slotData = availabilityData.find(s => s.date === date && s.hour === hr);
+                // remaining_seconds from server already excludes other bookings.
+                // We add back this slot's own usage (freq * slotDuration) since the server
+                // computed remaining before this booking existed.
+                const available = slotData ? slotData.remaining_seconds + freq * slotDuration : 3600;
+                if (freq * slotDuration > available) {
+                    alert(`Overbooking at ${date} ${TIME_LABELS[hr]}: ${freq}x × ${slotDuration}s = ${freq * slotDuration}s exceeds ${available}s available. Please reduce the frequency.`);
+                    return;
+                }
+            }
         }
 
         setSubmitting(true);
@@ -305,7 +326,7 @@ const BillboardBooking = () => {
 
     if (!billboard) return (
         <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}><XCircle width={20} height={20} /></div>
             <h3 style={{ color: '#EF4444', marginBottom: '8px' }}>Billboard not found</h3>
             <button type="button" onClick={() => navigate(-1)} className="btn-secondary">Go Back</button>
         </div>
@@ -372,7 +393,7 @@ const BillboardBooking = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <input
                                     type="date"
-                                    min={new Date().toISOString().split('T')[0]}
+                                    min={(() => { const d = new Date(); d.setDate(d.getDate() + (billboard?.booking_lead_days ?? 2)); return d.toISOString().split('T')[0]; })()}
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
                                     style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid #E5E7EB', fontSize: '14px', fontFamily: 'Inter, sans-serif', fontWeight: '600' }}
@@ -393,7 +414,11 @@ const BillboardBooking = () => {
                                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Duration</label>
                                 <span style={{ color: '#667B68', fontWeight: '800', fontSize: '14px' }}>{slotDuration}s</span>
                             </div>
-                            <input type="range" min="10" max="60" step="5" value={slotDuration} onChange={(e) => setSlotDuration(Number(e.target.value))} style={{ width: '100%', height: '6px', background: '#F3F4F6', borderRadius: '10px', appearance: 'none', cursor: 'pointer', accentColor: '#667B68' }} />
+                            <input type="range" min="10" max="60" step="5" value={slotDuration} onChange={(e) => {
+                                const newDuration = Number(e.target.value);
+                                if (newDuration > slotDuration) setSelectedSlots({});
+                                setSlotDuration(newDuration);
+                            }} style={{ width: '100%', height: '6px', background: '#F3F4F6', borderRadius: '10px', appearance: 'none', cursor: 'pointer', accentColor: '#667B68' }} />
                         </div>
 
                         <div style={{ background: '#fff', padding: '24px', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
@@ -401,7 +426,7 @@ const BillboardBooking = () => {
                                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Frequency</label>
                                 <span style={{ color: '#667B68', fontWeight: '800', fontSize: '14px' }}>{globalFrequency}x/hr</span>
                             </div>
-                            <input type="range" min="1" max="60" step="1" value={globalFrequency} onChange={(e) => setGlobalFrequency(Number(e.target.value))} style={{ width: '100%', height: '6px', background: '#F3F4F6', borderRadius: '10px', appearance: 'none', cursor: 'pointer', accentColor: '#667B68' }} />
+                            <input type="range" min="1" max={Math.min(60, Math.floor(3600 / slotDuration))} step="1" value={globalFrequency} onChange={(e) => setGlobalFrequency(Number(e.target.value))} style={{ width: '100%', height: '6px', background: '#F3F4F6', borderRadius: '10px', appearance: 'none', cursor: 'pointer', accentColor: '#667B68' }} />
                         </div>
                     </div>
 
@@ -489,25 +514,41 @@ const BillboardBooking = () => {
                                     </div>
                                 </div>
                                 <p style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '20px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ color: '#667B68' }}>💡</span> <strong>Pro Tip:</strong> Right-click an active slot to refine its standalone frequency.
+                                    <span style={{ color: '#667B68' }}><Lightbulb width={20} height={20} /></span> <strong>Pro Tip:</strong> Right-click an active slot to refine its standalone frequency.
                                 </p>
 
-                                {tuningSlot && (
-                                    <div ref={tuningRef} style={{ position: 'absolute', top: '100px', left: '50%', transform: 'translateX(-50%)', padding: '24px', background: '#fff', borderRadius: '24px', boxShadow: '0 25px 60px -12px rgba(0,0,0,0.18)', zIndex: 100, border: '1.5px solid #f1f1f1', width: '320px' }}>
-                                        <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '800', fontFamily: 'Outfit, sans-serif' }}>Tuning Slot</h4>
-                                        <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '24px', fontWeight: '500' }}>{new Date(tuningSlot.date).toLocaleDateString()} at {TIME_LABELS[tuningSlot.hour]}</p>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#4B5563' }}>Plays per hour</span>
-                                            <span style={{ fontWeight: '800', color: '#667B68' }}>{selectedSlots[tuningSlot.date][tuningSlot.hour]}x</span>
+                                {tuningSlot && (() => {
+                                    const remaining = getSlotAvailabilityStatus(tuningSlot.date, tuningSlot.hour);
+                                    const currentFreq = selectedSlots[tuningSlot.date][tuningSlot.hour];
+                                    const maxFreq = Math.max(1, Math.min(60, Math.floor(remaining / slotDuration)));
+                                    const safeFreq = Math.min(currentFreq, maxFreq);
+                                    return (
+                                        <div ref={tuningRef} style={{ position: 'absolute', top: '100px', left: '50%', transform: 'translateX(-50%)', padding: '24px', background: '#fff', borderRadius: '24px', boxShadow: '0 25px 60px -12px rgba(0,0,0,0.18)', zIndex: 100, border: '1.5px solid #f1f1f1', width: '320px' }}>
+                                            <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '800', fontFamily: 'Outfit, sans-serif' }}>Tuning Slot</h4>
+                                            <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '24px', fontWeight: '500' }}>{new Date(tuningSlot.date).toLocaleDateString()} at {TIME_LABELS[tuningSlot.hour]}</p>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                <span style={{ fontSize: '13px', fontWeight: '600', color: '#4B5563' }}>Plays per hour</span>
+                                                <span style={{ fontWeight: '800', color: '#667B68' }}>{safeFreq}x</span>
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '12px', fontWeight: '500' }}>
+                                                {slotDuration}s duration allows you to book for {maxFreq}x only
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="1"
+                                                max={maxFreq}
+                                                value={safeFreq}
+                                                onChange={(e) => updateSlotFrequency(tuningSlot.date, tuningSlot.hour, Number(e.target.value))}
+                                                style={{ width: '100%', height: '6px', background: '#F3F4F6', borderRadius: '10px', appearance: 'none', cursor: 'pointer', accentColor: '#667B68' }}
+                                            />
+                                            <button type="button" onClick={() => setTuningSlot(null)} style={{ width: '100%', marginTop: '24px', padding: '14px', borderRadius: '14px', border: 'none', background: '#111827', color: '#fff', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>Apply Changes</button>
                                         </div>
-                                        <input type="range" min="1" max="60" value={selectedSlots[tuningSlot.date][tuningSlot.hour]} onChange={(e) => updateSlotFrequency(tuningSlot.date, tuningSlot.hour, e.target.value)} style={{ width: '100%', height: '6px', background: '#F3F4F6', borderRadius: '10px', appearance: 'none', cursor: 'pointer', accentColor: '#667B68' }} />
-                                        <button type="button" onClick={() => setTuningSlot(null)} style={{ width: '100%', marginTop: '24px', padding: '14px', borderRadius: '14px', border: 'none', background: '#111827', color: '#fff', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>Apply Changes</button>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </section>
                         ) : (
                             <div style={{ padding: '80px 40px', textAlign: 'center', background: '#F9FAFB', borderRadius: '24px', border: '2px dashed #E5E7EB' }}>
-                                <div style={{ fontSize: '32px', marginBottom: '16px' }}>📅</div>
+                                <div style={{ fontSize: '32px', marginBottom: '16px' }}><Calendar width={20} height={20} /></div>
                                 <h4 style={{ margin: '0 0 8px 0', color: '#111827', fontWeight: '700' }}>Waiting for Timeline</h4>
                                 <p style={{ color: '#9CA3AF', fontSize: '14px', maxWidth: '300px', margin: '0 auto' }}>Select a date range above to visualize performance and availability data.</p>
                             </div>
@@ -532,7 +573,7 @@ const BillboardBooking = () => {
                             </div>
                             {creativeFile && (
                                 <div style={{ marginTop: '8px', padding: '10px 20px', background: '#667B68', color: '#fff', borderRadius: '12px', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span>📎 {creativeFile.name}</span>
+                                    <span><Paperclip width={20} height={20} /> {creativeFile.name}</span>
                                     <button type="button" onClick={() => setCreativeFile(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '16px' }}>×</button>
                                 </div>
                             )}
@@ -598,7 +639,7 @@ const BillboardBooking = () => {
                         </button>
 
                         <div style={{ background: '#FFF9E6', padding: '16px', borderRadius: '16px', marginTop: '24px', border: '1px solid #FEF3C7', display: 'flex', gap: '12px' }}>
-                            <span style={{ fontSize: '18px' }}>🔐</span>
+                            <span style={{ fontSize: '18px' }}><Key width={20} height={20} /></span>
                             <p style={{ margin: 0, fontSize: '11px', color: '#92400E', lineHeight: '1.4', fontWeight: '500' }}>
                                 <strong>Secure Transmission:</strong> Your creative assets and campaign data are encrypted and pending verification by the billboard owner.
                             </p>

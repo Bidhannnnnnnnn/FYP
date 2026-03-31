@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { Ban, CheckCircle, ClipboardList, Edit2, Flag, Trash2 } from 'lucide-react';
 
 // ─── SVG Icons ─────────────────────────────────────────────────────────────
 const IconEye   = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
@@ -10,11 +11,11 @@ const IconX     = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="no
 
 // ─── Status metadata for resolved bookings ──────────────────────────────────
 const STATUS_META = {
-    approved:          { color: '#059669', bg: '#ECFDF5', border: '#A7F3D0', icon: '✅', label: 'Approved & Active',   desc: 'Running on billboard'        },
-    rejected:          { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', icon: '🚫', label: 'Rejected',            desc: 'Booking was declined'        },
-    completed:         { color: '#6366F1', bg: '#EEF2FF', border: '#C7D2FE', icon: '🏁', label: 'Completed',           desc: 'Campaign has finished'       },
-    changes_requested: { color: '#B45309', bg: '#FFFBEB', border: '#FDE68A', icon: '✏️', label: 'Revision Requested',  desc: 'Awaiting advertiser update'  },
-    cancelled:         { color: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB', icon: '🗑️', label: 'Cancelled',           desc: 'Booking was cancelled'       },
+    approved:          { color: '#059669', bg: '#ECFDF5', border: '#A7F3D0', icon: '<CheckCircle width={20} height={20} />', label: 'Approved & Active',   desc: 'Running on billboard'        },
+    rejected:          { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', icon: '<Ban width={20} height={20} />', label: 'Rejected',            desc: 'Booking was declined'        },
+    completed:         { color: '#6366F1', bg: '#EEF2FF', border: '#C7D2FE', icon: '<Flag width={20} height={20} />', label: 'Completed',           desc: 'Campaign has finished'       },
+    changes_requested: { color: '#B45309', bg: '#FFFBEB', border: '#FDE68A', icon: '<Edit2 width={20} height={20} />️', label: 'Revision Requested',  desc: 'Awaiting advertiser update'  },
+    cancelled:         { color: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB', icon: '<Trash2 width={20} height={20} />️', label: 'Cancelled',           desc: 'Booking was cancelled'       },
 };
 
 // ─── Reusable action button ─────────────────────────────────────────────────
@@ -221,7 +222,7 @@ const AdminBookings = () => {
                         }) : (
                             <tr>
                                 <td colSpan="6" style={{ textAlign: 'center', padding: '60px 20px' }}>
-                                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>📋</div>
+                                    <div style={{ fontSize: '40px', marginBottom: '12px' }}><ClipboardList width={20} height={20} /></div>
                                     <p style={{ margin: 0, color: '#6B7280', fontWeight: '600' }}>No bookings yet</p>
                                     <p style={{ margin: '4px 0 0', color: '#9CA3AF', fontSize: '14px' }}>Bookings will appear here once advertisers submit requests.</p>
                                 </td>
@@ -248,7 +249,7 @@ const AdminBookings = () => {
                             background: confirm.action === 'approve' ? '#ECFDF5' : confirm.action === 'request_changes' ? '#FFFBEB' : '#FEF2F2',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px'
                         }}>
-                            {confirm.action === 'approve' ? '✅' : confirm.action === 'request_changes' ? '✏️' : '🚫'}
+                            {confirm.action === 'approve' ? '<CheckCircle width={20} height={20} />' : confirm.action === 'request_changes' ? '<Edit2 width={20} height={20} />️' : '<Ban width={20} height={20} />'}
                         </div>
                         <h3 style={{ margin: '0 0 10px', fontFamily: 'Outfit, sans-serif', fontSize: '22px', color: '#111827' }}>
                             {confirm.label}?
