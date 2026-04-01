@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Calendar, Lightbulb } from 'lucide-react';
 
-// 12-hour labels to match booking page
 const TIME_LABELS = [
     '12 AM', '1 AM', '2 AM', '3 AM', '4 AM', '5 AM', '6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM',
     '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM', '8 PM', '9 PM', '10 PM', '11 PM'
@@ -13,6 +12,29 @@ const getVisibilityColor = (hour) => {
     if ((hour >= 8 && hour <= 10) || (hour >= 16 && hour <= 18)) return '#f5e6bfff';
     if (hour >= 11 && hour <= 15) return '#d6dee6ff';
     return '#ffffff';
+};
+
+// Live countdown hook
+const useCountdown = (deadline) => {
+    const [timeLeft, setTimeLeft] = useState('');
+    const [expired, setExpired] = useState(false);
+
+    useEffect(() => {
+        if (!deadline) return;
+        const tick = () => {
+            const diff = new Date(deadline) - new Date();
+            if (diff <= 0) { setExpired(true); setTimeLeft('Expired'); return; }
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            setTimeLeft(`${h}h ${m}m ${s}s`);
+        };
+        tick();
+        const t = setInterval(tick, 1000);
+        return () => clearInterval(t);
+    }, [deadline]);
+
+    return { timeLeft, expired };
 };
 
 const BookingDetailsView = () => {
@@ -25,7 +47,22 @@ const BookingDetailsView = () => {
     // Action state
     const [actionLoading, setActionLoading] = useState(false);
     const [remarks, setRemarks] = useState('');
-    const [showRemarksFor, setShowRemarksFor] = useState(null); // 'reject' | 'revise' | null
+    const [showRemarksFor, setShowRemarksFor] = useState(null);
+    const [paying, setPaying] = useState(false);
+
+    const { timeLeft, expired } = useCountdown(booking?.payment_deadline);
+
+    const handlePay = async () => {
+        setPaying(true);
+        try {
+            await api.post(`campaigns/bookings/${id}/pay/`);
+            await fetchBooking();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Payment failed.');
+        } finally {
+            setPaying(false);
+        }
+    }; // 'reject' | 'revise' | null
 
     const fetchBooking = async () => {
         if (!id) return;
@@ -144,6 +181,54 @@ const BookingDetailsView = () => {
                         <div style={{ fontSize: '14px', color: '#9CA3AF', marginTop: '4px' }}>Total Price Quoted</div>
                     </div>
                 </div>
+
+                {/* Payment Deadline Banner — advertiser only, approved status */}
+                {!isOwnerView && booking_status === 'approved' && booking.payment_deadline && (
+                    <div style={{
+                        marginBottom: '32px',
+                        padding: '20px 24px',
+                        borderRadius: '16px',
+                        background: expired ? '#FEF2F2' : '#FFFBEB',
+                        border: `1.5px solid ${expired ? '#FECACA' : '#FDE68A'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '16px',
+                        flexWrap: 'wrap'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '24px' }}>{expired ? '⛔' : '⏳'}</span>
+                            <div>
+                                <div style={{ fontWeight: '800', fontSize: '15px', color: expired ? '#991B1B' : '#92400E' }}>
+                                    {expired ? 'Payment deadline passed — slot may be released' : `Pay within ${timeLeft} or this slot will be released`}
+                                </div>
+                                <div style={{ fontSize: '12px', color: expired ? '#B91C1C' : '#B45309', marginTop: '2px' }}>
+                                    Deadline: {new Date(booking.payment_deadline).toLocaleString()}
+                                </div>
+                            </div>
+                        </div>
+                        {!expired && (
+                            <button
+                                onClick={handlePay}
+                                disabled={paying}
+                                style={{
+                                    padding: '12px 28px',
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    background: '#667B68',
+                                    color: '#fff',
+                                    fontWeight: '800',
+                                    fontSize: '15px',
+                                    cursor: paying ? 'not-allowed' : 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    boxShadow: '0 4px 12px rgba(102,123,104,0.3)'
+                                }}
+                            >
+                                {paying ? 'Processing...' : '💳 Pay Now — NRs. ' + Number(price_calculated).toLocaleString()}
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Main Content Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: '40px', marginBottom: '40px' }}>

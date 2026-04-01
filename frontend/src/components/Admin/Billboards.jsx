@@ -238,7 +238,7 @@ const AdminBillboards = () => {
                                     </td>
                                     <td onClick={e => e.stopPropagation()}>
                                         <span className={`status-badge status-${b.status}`} style={{ padding: '6px 12px', letterSpacing: '0.02em' }}>
-                                            {b.status === 'pending' ? '⏳ Pending Review' : b.status === 'approved' ? '<Check width={16} height={16} /> Approved & Live' : b.status === 'rejected' ? '<AlertTriangle width={20} height={20} />️ Needs Changes' : '○ Hidden'}
+                                            {b.status === 'pending' ? 'Pending Review' : b.status === 'approved' ? 'Approved & Live' : b.status === 'rejected' ? 'Needs Changes' : '○ Hidden'}
                                         </span>
                                     </td>
                                     <td onClick={e => e.stopPropagation()} style={{ textAlign: 'right', paddingRight: '24px' }}>
@@ -293,7 +293,7 @@ const AdminBillboards = () => {
                         
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
                             <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: confirm.action === 'approve' ? '#ECFDF5' : confirm.action === 'reject' ? '#FFFBEB' : '#F3F4F6', color: confirm.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', border: `1px solid ${confirm.action === 'approve' ? '#A7F3D0' : confirm.action === 'reject' ? '#FDE68A' : '#E5E7EB'}` }}>
-                                {confirm.action === 'approve' ? '<Sparkles width={20} height={20} />' : confirm.action === 'reject' ? '<Edit width={20} height={20} />️' : '<Lock width={20} height={20} />'}
+                                {confirm.action === 'approve' ? <Sparkles width={20} height={20} /> : confirm.action === 'reject' ? <Edit width={20} height={20} /> : <Lock width={20} height={20} />}
                             </div>
                             <div>
                                 <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: '24px', color: 'var(--admin-text-dark)' }}>{confirm.label}?</h2>

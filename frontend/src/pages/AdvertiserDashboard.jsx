@@ -297,27 +297,22 @@ const AdvertiserDashboard = () => {
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
                 <div className="header-left">
-                    <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '32px', margin: '0 0 8px 0', color: '#1F2937', fontWeight: '700' }}>
-                        Hi, {user.name}
+                    <p style={{ fontSize: '13px', color: '#9CA3AF', fontWeight: '500', margin: '0 0 4px 0' }}>
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                    <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '28px', margin: '0 0 4px 0', color: '#111827', fontWeight: '800' }}>
+                        Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user.name.split(' ')[0]} 👋
                     </h1>
-                    <p style={{ fontSize: '16px', color: '#6B7280', margin: 0 }}>
+                    <p style={{ fontSize: '14px', color: '#6B7280', margin: 0 }}>
                         Here's what's happening with your campaigns today.
                     </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', paddingTop: '8px' }}>
-                    <div style={{ transform: 'translateX(-5px)' }}>
-                        <NotificationBell />
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '4px' }}>
+                    <NotificationBell />
                     <div
                         className="profile-avatar"
                         onClick={() => navigate('/advertiser/profile')}
-                        style={{
-                            cursor: 'pointer',
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '10px',
-                            fontSize: '14px'
-                        }}
+                        style={{ cursor: 'pointer', width: '38px', height: '38px', borderRadius: '10px', fontSize: '13px' }}
                     >
                         {getInitials(user.name)}
                     </div>
@@ -640,99 +635,76 @@ const AdvertiserDashboard = () => {
                 </div>
 
                 <nav className="sidebar-nav" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                    <div className="nav-section-label">Menu</div>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                         <li>
-                            <NavLink
-                                to="/advertiser"
-                                end
-                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
-                            >
-                                <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
+                            <NavLink to="/advertiser" end className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
                                 <span className="nav-text">Dashboard</span>
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink
-                                to="/advertiser/explore"
-                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
-                            >
-                                <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg></span>
+                            <NavLink to="/advertiser/explore" className={({ isActive }) => (isActive || location.pathname.startsWith('/billboard')) ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg></span>
                                 <span className="nav-text">Explore Billboards</span>
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink
-                                to="/advertiser/my-bookings"
-                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
-                            >
-                                <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
+                            <NavLink to="/advertiser/my-bookings" className={({ isActive }) => (isActive || location.pathname.startsWith('/booking')) ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
                                 <span className="nav-text">My Bookings</span>
                             </NavLink>
                         </li>
+                    </ul>
+                    <div className="nav-section-label" style={{ marginTop: '24px' }}>Finance</div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                         <li>
-                            <NavLink
-                                to="/advertiser/billing"
-                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
-                            >
-                                <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg></span>
+                            <NavLink to="/advertiser/billing" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg></span>
                                 <span className="nav-text">Billing & Payments</span>
+                            </NavLink>
+                        </li>
+                    </ul>
+
+                    <div className="nav-section-label" style={{ marginTop: '24px' }}>Account</div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        <li>
+                            <NavLink to="/advertiser/profile" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path></svg></span>
+                                <span className="nav-text">Settings</span>
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink to="/about" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                                <span className="nav-text">About Us</span>
                             </NavLink>
                         </li>
                     </ul>
                 </nav>
 
-                <div className="sidebar-footer" style={{ marginTop: 'auto', borderTop: '1px solid #E5E7EB' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px 20px',
-                        transition: 'all 0.2s ease',
-                        cursor: 'default'
-                    }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#F9FAFB'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                <div className="sidebar-footer" style={{ marginTop: 'auto', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', borderRadius: '10px', gap: '10px', transition: 'background 0.2s', cursor: 'default' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#F3F4F6'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                        <NavLink
-                            to="/advertiser/profile"
-                            style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', flexGrow: 1, overflow: 'hidden' }}
-                        >
-                            <div style={{ width: '36px', height: '36px', background: '#667B68', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 'bold', flexShrink: 0 }}>
+                        <NavLink to="/advertiser/profile" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexGrow: 1, overflow: 'hidden' }}>
+                            <div style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg, #667B68, #4A5D4C)', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', flexShrink: 0 }}>
                                 {getInitials(user?.name)}
                             </div>
-                            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                                {user?.name || 'Advertiser'}
-                            </span>
+                            <div style={{ overflow: 'hidden' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'Advertiser'}</div>
+                                <div style={{ fontSize: '11px', color: '#9CA3AF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email || ''}</div>
+                            </div>
                         </NavLink>
-
-                        <div style={{ width: '1px', height: '20px', background: '#E5E7EB', margin: '0 12px' }}></div>
-
                         <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setShowLogoutConfirm(true);
-                            }}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowLogoutConfirm(true); }}
                             title="Sign Out"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#6B7280',
-                                cursor: 'pointer',
-                                padding: '6px',
-                                borderRadius: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s ease'
-                            }}
+                            style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'all 0.2s' }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#EF4444'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9CA3AF'; }}
                         >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
-                            </svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                         </button>
                     </div>
                 </div>

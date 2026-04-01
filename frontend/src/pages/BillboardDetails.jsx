@@ -131,7 +131,7 @@ const BillboardDetails = () => {
                         ))}
                     </div>
 
-                    <div style={{ background: '#fff', borderTop: '1px solid #F3F4F6', paddingTop: '32px' }}>
+                    <div style={{ background: '#fff', borderTop: '1.5px solid #F3F4F6', padding: '32px', borderRadius: '28px' }}>
                         <h3 style={{ fontSize: '20px', color: '#111827', fontWeight: '700', marginBottom: '16px', fontFamily: 'Outfit, sans-serif' }}>Description & Audience</h3>
                         <p style={{ lineHeight: '1.7', color: '#4B5563', fontSize: '16px', maxWidth: '90%' }}>
                             {billboard.description || "This premium placement captures high-intent traffic along one of the city's most traversed arterials. Ideally suited for brands looking to establish a dominant presence with vibrant, high-contrast creative."}

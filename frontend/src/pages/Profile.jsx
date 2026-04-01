@@ -362,7 +362,7 @@ const Profile = () => {
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                                     {pwdRules.map(rule => (
                                                         <span key={rule.label} style={{ fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '100px', background: rule.test(newPassword) ? '#ECFDF5' : '#F9FAFB', color: rule.test(newPassword) ? '#059669' : '#9CA3AF', border: `1px solid ${rule.test(newPassword) ? '#D1FAE5' : '#F3F4F6'}`, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            {rule.test(newPassword) ? '<Check width={16} height={16} />' : '○'} {rule.label}
+                                                            {rule.test(newPassword) ? <Check width={16} height={16} /> : '○'} {rule.label}
                                                         </span>
                                                     ))}
                                                 </div>

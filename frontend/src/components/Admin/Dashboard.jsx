@@ -332,21 +332,9 @@ const AdminDashboard = () => {
                         <NotificationBell />
                     </div>
                     <div
-                        className="avatar-header"
+                        className="profile-avatar"
                         onClick={() => navigate('/admin/profile')}
-                        style={{
-                            cursor: 'pointer',
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '10px',
-                            fontSize: '14px',
-                            background: 'linear-gradient(135deg, #667B68 0%, #4A5D4C 100%)',
-                            color: 'white',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: '700'
-                        }}
+                        style={{ cursor: 'pointer', width: '40px', height: '40px', borderRadius: '10px', fontSize: '14px' }}
                     >
                         {getInitials(user.name)}
                     </div>
@@ -359,26 +347,17 @@ const AdminDashboard = () => {
                         <span className="stat-label">Total Users</span>
                         <div className="stat-value">{stats.totalUsers}</div>
                     </div>
-                    <div className="stat-icon-bg">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                    </div>
                 </div>
                 <div className="stat-card" onClick={() => navigate('/admin/billboards')} style={{ cursor: 'pointer' }}>
                     <div className="stat-content">
-                        <span className="stat-label" style={{ color: '#D97706' }}>Pending Billboards</span>
+                        <span className="stat-label">Pending Billboards</span>
                         <div className="stat-value">{stats.pendingBillboards}</div>
                     </div>
-                    <div className="stat-icon-bg" style={{ background: '#FEF3C7', color: '#D97706' }}>
-                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    </div>
                 </div>
                 <div className="stat-card" onClick={() => navigate('/admin/billboards')} style={{ cursor: 'pointer' }}>
                     <div className="stat-content">
-                        <span className="stat-label" style={{ color: '#059669' }}>Approved Billboards</span>
+                        <span className="stat-label">Approved Billboards</span>
                         <div className="stat-value">{stats.approvedBillboards}</div>
-                    </div>
-                    <div className="stat-icon-bg" style={{ background: '#D1FAE5', color: '#059669' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                     </div>
                 </div>
             </div>

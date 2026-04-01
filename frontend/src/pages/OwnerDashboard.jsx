@@ -248,6 +248,7 @@ const OwnerDashboard = () => {
     const [stats, setStats] = useState({
         totalEarnings: 0,
         pendingRequests: 0,
+        adsToday: 0,
         occupancyRate: 0
     });
     const [chartData, setChartData] = useState({
@@ -296,8 +297,20 @@ const OwnerDashboard = () => {
             // 4. Derive Stats
             const pending = bookingsRes.data.filter(b => b.booking_status === 'pending').length;
             const earnings = bookingsRes.data
-                .filter(b => b.booking_status === 'approved')
+                .filter(b => ['paid', 'active'].includes(b.booking_status))
                 .reduce((acc, curr) => acc + parseFloat(curr.price_calculated || 0), 0);
+
+            // Ads running today — paid/active bookings whose date range covers today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const adsToday = bookingsRes.data.filter(b => {
+                if (!['paid', 'active'].includes(b.booking_status)) return false;
+                const start = new Date(b.start_date);
+                const end = new Date(b.end_date);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+                return today >= start && today <= end;
+            }).length;
 
             // Occupancy - Simplified mock for now
             const occupancy = bookingsRes.data.length > 0 ? 85 : 0;
@@ -305,6 +318,7 @@ const OwnerDashboard = () => {
             setStats({
                 totalEarnings: earnings,
                 pendingRequests: pending,
+                adsToday,
                 occupancyRate: occupancy
             });
 
@@ -494,102 +508,100 @@ const OwnerDashboard = () => {
             {/* Sidebar */}
             <div className="sidebar">
                 <div className="brand-section">
-                    <img src={logoImg} alt="Bimbasetu Logo" className="brand-logo" style={{ height: '35px', width: 'auto', objectFit: 'contain' }} />
+                    <img src={logoImg} alt="Bimbasetu Logo" className="sidebar-logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
                 </div>
 
                 <nav className="sidebar-nav" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                    <div className="nav-section-label">Menu</div>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                         <li>
                             <NavLink
-                                to="/owner/analytics"
-                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+                                to="/owner"
+                                end
+                                className={({ isActive }) => (isActive || location.pathname === '/owner/analytics') ? 'nav-item active' : 'nav-item'}
                             >
-                                <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
                                 <span className="nav-text">Dashboard</span>
                             </NavLink>
                         </li>
                         <li>
                             <NavLink
                                 to="/owner/requests"
-                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+                                className={({ isActive }) => (isActive || location.pathname.startsWith('/booking')) ? 'nav-item active' : 'nav-item'}
                             >
-                                <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
                                 <span className="nav-text">Requests</span>
                             </NavLink>
                         </li>
                         <li>
                             <NavLink
                                 to="/owner/billboards"
-                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+                                className={({ isActive }) => (isActive || location.pathname.startsWith('/billboard')) ? 'nav-item active' : 'nav-item'}
                             >
-                                <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg></span>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg></span>
                                 <span className="nav-text">My Billboards</span>
                             </NavLink>
                         </li>
+                    </ul>
+
+                    <div className="nav-section-label" style={{ marginTop: '24px' }}>Finance</div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                         <li>
                             <NavLink
                                 to="/owner/billing"
                                 className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
                             >
-                                <span className="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></span>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg></span>
                                 <span className="nav-text">Billing & Payments</span>
+                            </NavLink>
+                        </li>
+                    </ul>
+
+                    <div className="nav-section-label" style={{ marginTop: '24px' }}>Account</div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        <li>
+                            <NavLink
+                                to="/owner/profile"
+                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+                            >
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path></svg></span>
+                                <span className="nav-text">Settings</span>
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink
+                                to="/about"
+                                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+                            >
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                                <span className="nav-text">About Us</span>
                             </NavLink>
                         </li>
                     </ul>
                 </nav>
 
-                <div className="sidebar-footer" style={{ marginTop: 'auto', borderTop: '1px solid #E5E7EB' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px 20px',
-                        transition: 'all 0.2s ease',
-                        cursor: 'default'
-                    }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#F9FAFB'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                <div className="sidebar-footer" style={{ marginTop: 'auto', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', borderRadius: '10px', gap: '10px', transition: 'background 0.2s', cursor: 'default' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#F3F4F6'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                        <NavLink
-                            to="/owner/profile"
-                            style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', flexGrow: 1, overflow: 'hidden' }}
-                        >
-                            <div style={{ width: '36px', height: '36px', background: '#667B68', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 'bold', flexShrink: 0 }}>
+                        <NavLink to="/owner/profile" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexGrow: 1, overflow: 'hidden' }}>
+                            <div style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg, #667B68, #4A5D4C)', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', flexShrink: 0 }}>
                                 {getInitials(user?.name)}
                             </div>
-                            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                                {user?.name || 'Owner'}
-                            </span>
+                            <div style={{ overflow: 'hidden' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'Owner'}</div>
+                                <div style={{ fontSize: '11px', color: '#9CA3AF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email || ''}</div>
+                            </div>
                         </NavLink>
-
-                        <div style={{ width: '1px', height: '20px', background: '#E5E7EB', margin: '0 12px' }}></div>
-
                         <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setShowLogoutConfirm(true);
-                            }}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowLogoutConfirm(true); }}
                             title="Sign Out"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#6B7280',
-                                cursor: 'pointer',
-                                padding: '6px',
-                                borderRadius: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s ease'
-                            }}
+                            style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'all 0.2s' }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#EF4444'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9CA3AF'; }}
                         >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
-                            </svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                         </button>
                     </div>
                 </div>
@@ -936,24 +948,24 @@ const DashboardHome = ({ user, stats, myBillboards, navigate, getInitials, chart
         <div className="stats-row">
             <div className="stat-card primary-stat">
                 <div className="stat-content">
-                    <span className="stat-label">Total Earnings</span>
-                    <div className="stat-value">NRs. {stats.totalEarnings.toLocaleString()}</div>
+                    <span className="stat-label">Total Earned (Paid)</span>
+                    <div className="stat-value" style={{ fontSize: stats.totalEarnings >= 100000 ? '28px' : '40px' }}>
+                        {stats.totalEarnings.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginTop: '4px' }}>NRs.</div>
                 </div>
-                <div className="stat-icon-bg">NRs.</div>
             </div>
             <div className="stat-card">
                 <div className="stat-content">
-                    <span className="stat-label">Pending Requests</span>
-                    <div className="stat-value">{stats.pendingRequests}</div>
+                    <span className="stat-label">Ads Running Today</span>
+                    <div className="stat-value">{stats.adsToday}</div>
                 </div>
-                <div className="stat-icon-bg">?</div>
             </div>
             <div className="stat-card">
                 <div className="stat-content">
                     <span className="stat-label">My Billboards</span>
                     <div className="stat-value">{myBillboards.length}</div>
                 </div>
-                <div className="stat-icon-bg">B</div>
             </div>
         </div>
 

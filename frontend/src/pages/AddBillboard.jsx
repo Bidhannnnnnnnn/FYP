@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams, NavLink } from 'react-router-dom';
+import { useNavigate, useParams, NavLink, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { validatePrice } from '../utils/validation';
 import './AdvertiserDashboard.css';
-import { Book, Building, Camera, Check, CheckCircle, ClipboardList, DollarSign, File, Image, Map, MapPin, Scale, Sparkles, XCircle, Zap } from 'lucide-react';
+import logoImg from '../assets/BimbasetuLogo.png';
+import { Book, Building, Camera, Check, CheckCircle, ClipboardList, IndianRupee, File, Image, Map, MapPin, Scale, Sparkles, XCircle, Zap } from 'lucide-react';
 
 const STEP_CONFIG = [
     { id: 1, label: 'General Info', icon: <ClipboardList width={20} height={20} /> },
-    { id: 2, label: 'Specs & Pricing', icon: <DollarSign width={20} height={20} /> },
+    { id: 2, label: 'Specs & Pricing', icon: <IndianRupee width={20} height={20} /> },
     { id: 3, label: 'Visuals & Location', icon: <Map width={20} height={20} /> },
     { id: 4, label: 'Legal Clearance', icon: <Scale width={20} height={20} /> },
 ];
@@ -43,6 +44,7 @@ const inputStyle = {
 const AddBillboard = () => {
     const navigate = useNavigate();
     const { editId } = useParams();
+    const location = useLocation();
 
     const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
@@ -178,77 +180,79 @@ const AddBillboard = () => {
             {/* ── Sidebar ── */}
             <div className="sidebar">
                 <div className="brand-section">
-                    <h2>Owner Portal</h2>
+                    <img src={logoImg} alt="Bimbasetu Logo" className="sidebar-logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
                 </div>
 
                 <nav className="sidebar-nav" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                    <div className="nav-section-label">Menu</div>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                         <li>
-                            <NavLink to="/owner/analytics" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
-                                <span className="nav-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-                                        <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
-                                    </svg>
-                                </span>
+                            <NavLink to="/owner" end className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg></span>
                                 <span className="nav-text">Dashboard</span>
                             </NavLink>
                         </li>
                         <li>
                             <NavLink to="/owner/requests" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
-                                <span className="nav-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                        <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-                                    </svg>
-                                </span>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></span>
                                 <span className="nav-text">Requests</span>
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink to="/owner/billboards" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
-                                <span className="nav-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="2" y="7" width="20" height="15" rx="2" ry="2" /><polyline points="17 2 12 7 7 2" />
-                                    </svg>
-                                </span>
+                            <NavLink to="/owner/billboards" className={({ isActive }) => (isActive || location.pathname.startsWith('/owner/billboard')) ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2" /><polyline points="17 2 12 7 7 2" /></svg></span>
                                 <span className="nav-text">My Billboards</span>
                             </NavLink>
                         </li>
+                    </ul>
+
+                    <div className="nav-section-label" style={{ marginTop: '24px' }}>Finance</div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                         <li>
                             <NavLink to="/owner/billing" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
-                                <span className="nav-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                                    </svg>
-                                </span>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" ry="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg></span>
                                 <span className="nav-text">Billing &amp; Payments</span>
+                            </NavLink>
+                        </li>
+                    </ul>
+
+                    <div className="nav-section-label" style={{ marginTop: '24px' }}>Account</div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        <li>
+                            <NavLink to="/owner/profile" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg></span>
+                                <span className="nav-text">Settings</span>
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink to="/about" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                                <span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg></span>
+                                <span className="nav-text">About Us</span>
                             </NavLink>
                         </li>
                     </ul>
                 </nav>
 
-                <div className="sidebar-footer" style={{ marginTop: 'auto', borderTop: '1px solid #E5E7EB' }}>
-                    <div
-                        style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', transition: 'all 0.2s ease', cursor: 'default' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#F9FAFB'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                <div className="sidebar-footer" style={{ marginTop: 'auto', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', borderRadius: '10px', gap: '10px', transition: 'background 0.2s', cursor: 'default' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#F3F4F6'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                        <NavLink to="/owner/profile" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', flexGrow: 1, overflow: 'hidden' }}>
-                            <div style={{ width: '36px', height: '36px', background: '#667B68', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 'bold', flexShrink: 0 }}>O</div>
-                            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>Owner</span>
+                        <NavLink to="/owner/profile" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexGrow: 1, overflow: 'hidden' }}>
+                            <div style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg, #667B68, #4A5D4C)', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', flexShrink: 0 }}>O</div>
+                            <div style={{ overflow: 'hidden' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Owner</div>
+                                <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Billboard Owner</div>
+                            </div>
                         </NavLink>
-                        <div style={{ width: '1px', height: '20px', background: '#E5E7EB', margin: '0 12px' }} />
                         <button
                             onClick={() => { localStorage.removeItem('accessToken'); localStorage.removeItem('role'); navigate('/login'); }}
                             title="Sign Out"
-                            style={{ background: 'transparent', border: 'none', color: '#6B7280', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                            style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'all 0.2s' }}
                             onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#EF4444'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9CA3AF'; }}
                         >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
-                            </svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
                         </button>
                     </div>
                 </div>
@@ -342,13 +346,13 @@ const AddBillboard = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                             <div style={{ background: '#fff', borderRadius: '28px', padding: '36px', border: '1.5px solid #F3F4F6', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #F59E0B, #D97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><DollarSign width={20} height={20} /></div>
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #F59E0B, #D97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}><IndianRupee width={20} height={20} /></div>
                                     <div>
                                         <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif' }}>Pricing</h3>
                                         <p style={{ margin: 0, fontSize: '12px', color: '#9CA3AF' }}>Set your base daily rate.</p>
                                     </div>
                                 </div>
-                                <InputField label="Daily Base Rate (NRs.)" required>
+                                <InputField label="Daily Base Rate (NRs.)" required hint={`Ask yourself: "How much do I want to earn if my billboard runs a standard 10-second ad, 10 times per hour, for a full 24 hours, on a normal weekday?" That number is your base rate. Peak hours, festive seasons, and advertiser settings multiply on top of it.`}>
                                     <input name="base_price" type="number" min="0" value={formData.base_price} onChange={handleChange} placeholder="e.g. 5000" required style={inputStyle}
                                         onFocus={e => { e.target.style.borderColor = '#F59E0B'; e.target.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.1)'; }}
                                         onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.boxShadow = 'none'; }} />
@@ -531,7 +535,7 @@ const AddBillboard = () => {
                                         <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '700', color: '#111827' }}>Attached Documents ({legalFiles.length})</p>
                                         {legalFiles.map((file, idx) => (
                                             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', background: '#F9FAFB', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
-                                                <div style={{ fontSize: '20px' }}>{file.type.includes('pdf') ? '<Book width={20} height={20} />' : '<Image width={20} height={20} />'}</div>
+                                                <div style={{ fontSize: '20px' }}>{file.type.includes('pdf') ? <Book width={20} height={20} /> : <Image width={20} height={20} />}</div>
                                                 <div style={{ flex: 1, overflow: 'hidden' }}>
                                                     <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{file.name}</p>
                                                     <p style={{ margin: 0, fontSize: '11px', color: '#9CA3AF' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</p>

@@ -641,7 +641,7 @@ const BillboardBooking = () => {
                         <div style={{ background: '#FFF9E6', padding: '16px', borderRadius: '16px', marginTop: '24px', border: '1px solid #FEF3C7', display: 'flex', gap: '12px' }}>
                             <span style={{ fontSize: '18px' }}><Key width={20} height={20} /></span>
                             <p style={{ margin: 0, fontSize: '11px', color: '#92400E', lineHeight: '1.4', fontWeight: '500' }}>
-                                <strong>Secure Transmission:</strong> Your creative assets and campaign data are encrypted and pending verification by the billboard owner.
+                                <strong>Secure Transmission:</strong> Your creative assets and campaign data are pending verification by the billboard owner.
                             </p>
                         </div>
                     </div>

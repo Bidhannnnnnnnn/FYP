@@ -11,11 +11,11 @@ const IconX     = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="no
 
 // ─── Status metadata for resolved bookings ──────────────────────────────────
 const STATUS_META = {
-    approved:          { color: '#059669', bg: '#ECFDF5', border: '#A7F3D0', icon: '<CheckCircle width={20} height={20} />', label: 'Approved & Active',   desc: 'Running on billboard'        },
-    rejected:          { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', icon: '<Ban width={20} height={20} />', label: 'Rejected',            desc: 'Booking was declined'        },
-    completed:         { color: '#6366F1', bg: '#EEF2FF', border: '#C7D2FE', icon: '<Flag width={20} height={20} />', label: 'Completed',           desc: 'Campaign has finished'       },
-    changes_requested: { color: '#B45309', bg: '#FFFBEB', border: '#FDE68A', icon: '<Edit2 width={20} height={20} />️', label: 'Revision Requested',  desc: 'Awaiting advertiser update'  },
-    cancelled:         { color: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB', icon: '<Trash2 width={20} height={20} />️', label: 'Cancelled',           desc: 'Booking was cancelled'       },
+    approved:          { color: '#059669', bg: '#ECFDF5', border: '#A7F3D0', icon: <CheckCircle width={20} height={20} />, label: 'Approved & Active',   desc: 'Running on billboard'        },
+    rejected:          { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', icon: <Ban width={20} height={20} />, label: 'Rejected',            desc: 'Booking was declined'        },
+    completed:         { color: '#6366F1', bg: '#EEF2FF', border: '#C7D2FE', icon: <Flag width={20} height={20} />, label: 'Completed',           desc: 'Campaign has finished'       },
+    changes_requested: { color: '#B45309', bg: '#FFFBEB', border: '#FDE68A', icon: <Edit2 width={20} height={20} />, label: 'Revision Requested',  desc: 'Awaiting advertiser update'  },
+    cancelled:         { color: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB', icon: <Trash2 width={20} height={20} />, label: 'Cancelled',           desc: 'Booking was cancelled'       },
 };
 
 // ─── Reusable action button ─────────────────────────────────────────────────
@@ -249,7 +249,7 @@ const AdminBookings = () => {
                             background: confirm.action === 'approve' ? '#ECFDF5' : confirm.action === 'request_changes' ? '#FFFBEB' : '#FEF2F2',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px'
                         }}>
-                            {confirm.action === 'approve' ? '<CheckCircle width={20} height={20} />' : confirm.action === 'request_changes' ? '<Edit2 width={20} height={20} />️' : '<Ban width={20} height={20} />'}
+                            {confirm.action === 'approve' ? <CheckCircle width={20} height={20} /> : confirm.action === 'request_changes' ? <Edit2 width={20} height={20} /> : <Ban width={20} height={20} />}
                         </div>
                         <h3 style={{ margin: '0 0 10px', fontFamily: 'Outfit, sans-serif', fontSize: '22px', color: '#111827' }}>
                             {confirm.label}?

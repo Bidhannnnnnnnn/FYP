@@ -23,6 +23,7 @@ import AdminUserProfile from './components/Admin/AdminUserProfile';
 import AddBillboard from './pages/AddBillboard';
 import AdminBillboardDetail from './components/Admin/AdminBillboardDetail';
 import Banned from './pages/Banned';
+import About from './pages/About';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/banned" element={<Banned />} />
+        <Route path="/about" element={<About />} />
 
         {/* Owner Portal */}
         <Route path="/owner" element={<DashboardWrapper />} />

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, NavLink } from 'react-router-dom';
 import api from '../../services/api';
-import './Admin.css';
+import '../../pages/AdvertiserDashboard.css';
+import logoImg from '../../assets/BimbasetuLogo.png';
 import { Book, Building, Folder, Image, MapPin, Phone } from 'lucide-react';
 
 const AdminBillboardDetail = () => {
@@ -94,65 +95,84 @@ const AdminBillboardDetail = () => {
     };
 
     const Sidebar = () => (
-        <aside className="admin-sidebar">
-            <h2 className="brand-name">Bimbasetu</h2>
-            <nav>
-                {NAV.map(item => (
-                    <NavLink key={item.to} to={item.to} end={item.end}
-                        className={({ isActive }) => isActive ? 'admin-nav-item active' : 'admin-nav-item'}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{item.icon}</svg>
-                        {item.label}
-                    </NavLink>
-                ))}
+        <div className="sidebar">
+            <div className="brand-section">
+                <img src={logoImg} alt="Bimbasetu Logo" className="sidebar-logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
+            </div>
+            <nav className="sidebar-nav" style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                <div className="nav-section-label">Menu</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    <li><NavLink to="/admin" end className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}><span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span><span className="nav-text">Dashboard</span></NavLink></li>
+                    <li><NavLink to="/admin/bookings" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}><span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span className="nav-text">Bookings</span></NavLink></li>
+                    <li><NavLink to="/admin/billboards" className={({ isActive }) => (isActive || location.pathname.startsWith('/admin/billboard')) ? 'nav-item active' : 'nav-item'}><span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg></span><span className="nav-text">Billboards</span></NavLink></li>
+                    <li><NavLink to="/admin/users" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}><span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span className="nav-text">Users</span></NavLink></li>
+                </ul>
+                <div className="nav-section-label" style={{ marginTop: '24px' }}>Finance</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    <li><NavLink to="/admin/billing" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}><span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span><span className="nav-text">Finance & Billing</span></NavLink></li>
+                </ul>
+                <div className="nav-section-label" style={{ marginTop: '24px' }}>Account</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    <li><NavLink to="/admin/profile" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}><span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span><span className="nav-text">Settings</span></NavLink></li>
+                    <li><NavLink to="/about" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}><span className="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><span className="nav-text">About Us</span></NavLink></li>
+                </ul>
             </nav>
-            <div className="sidebar-footer">
-                <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', gap: '12px' }}>
-                    <NavLink to="/admin/profile" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flex: 1, overflow: 'hidden' }}>
-                        <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'linear-gradient(135deg, #667B68, #4A5D4C)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', flexShrink: 0 }}>AD</div>
+            <div className="sidebar-footer" style={{ marginTop: 'auto', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', borderRadius: '10px', gap: '10px', transition: 'background 0.2s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#F3F4F6'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                    <NavLink to="/admin/profile" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexGrow: 1, overflow: 'hidden' }}>
+                        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #667B68, #4A5D4C)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', flexShrink: 0 }}>
+                            {adminName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
+                        </div>
                         <div style={{ overflow: 'hidden' }}>
-                            <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#1F2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{adminName}</p>
-                            <p style={{ margin: 0, fontSize: '11px', color: '#6B7280' }}>Super Admin</p>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{adminName}</div>
+                            <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Super Admin</div>
                         </div>
                     </NavLink>
-                    <button onClick={handleLogout} title="Sign Out" className="sidebar-logout"
-                        style={{ width: 'auto', padding: '8px', borderRadius: '8px' }}>
+                    <button onClick={handleLogout} title="Sign Out"
+                        style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'all 0.2s' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#EF4444'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9CA3AF'; }}
+                    >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     </button>
                 </div>
             </div>
-        </aside>
+        </div>
     );
 
     /* ── Loading / Not found ── */
     if (loading) return (
-        <div className="admin-container">
+        <div className="dashboard-container">
             <Sidebar />
-            <main className="admin-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center', color: 'var(--admin-text-muted)' }}>
+            <div className="main-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', color: '#6B7280' }}>
                     <div style={{ width: '36px', height: '36px', border: '3px solid #E5E7EB', borderTopColor: '#667B68', borderRadius: '50%', animation: 'abSpin 0.8s linear infinite', margin: '0 auto 12px' }} />
                     Loading billboard details…
                 </div>
-            </main>
+            </div>
             <style>{`@keyframes abSpin{to{transform:rotate(360deg)}}`}</style>
         </div>
     );
 
     if (!billboard) return (
-        <div className="admin-container">
+        <div className="dashboard-container">
             <Sidebar />
-            <main className="admin-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="main-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
-                    <p style={{ color: 'var(--admin-text-muted)', marginBottom: '16px' }}>Billboard not found.</p>
-                    <button className="action-btn approve-btn" onClick={() => navigate('/admin/billboards')}>← Back to Billboards</button>
+                    <p style={{ color: '#6B7280', marginBottom: '16px' }}>Billboard not found.</p>
+                    <button className="btn-primary" onClick={() => navigate('/admin/billboards')}>← Back to Billboards</button>
                 </div>
-            </main>
+            </div>
         </div>
     );
 
     const cfg = STATUS_CFG[billboard.status] || STATUS_CFG.hidden;
 
     return (
-        <div className="admin-container">
+        <div className="dashboard-container">
             {/* Toast */}
             {toast.show && (
                 <div style={{ position: 'fixed', top: '20px', right: '20px', background: toast.type === 'success' ? '#10B981' : '#EF4444', color: '#fff', padding: '16px 24px', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '12px', fontWeight: '600', animation: 'slideInRight 0.3s ease-out' }}>
@@ -165,18 +185,18 @@ const AdminBillboardDetail = () => {
 
             <Sidebar />
 
-            <main className="admin-main">
+            <div className="main-content">
                 {/* Back nav */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '28px' }}>
                     <button onClick={() => navigate('/admin/billboards')}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--admin-text-muted)', fontWeight: '500', fontSize: '14px', padding: '4px 0', fontFamily: 'Inter, sans-serif', transition: 'color 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--admin-primary-green)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--admin-text-muted)'}>
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontWeight: '500', fontSize: '14px', padding: '4px 0', fontFamily: 'Inter, sans-serif', transition: 'color 0.2s' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#667B68'}
+                        onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                         Billboards
                     </button>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    <span style={{ fontSize: '14px', color: 'var(--admin-text-dark)', fontWeight: '500' }}>{billboard.title}</span>
+                    <span style={{ fontSize: '14px', color: '#111827', fontWeight: '500' }}>{billboard.title}</span>
                 </div>
 
                 {/* Page title */}
@@ -203,7 +223,7 @@ const AdminBillboardDetail = () => {
                         <div style={{ borderRadius: '20px', overflow: 'hidden', height: '300px', background: '#F3F4F6', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.04)' }}>
                             {billboard.image
                                 ? <img src={billboard.image} alt={billboard.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                : <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: 'var(--admin-text-muted)' }}>
+                                : <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: '#6B7280' }}>
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
                                     <span style={{ fontSize: '14px' }}>No image uploaded</span>
                                   </div>
@@ -211,7 +231,7 @@ const AdminBillboardDetail = () => {
                         </div>
 
                         {/* Specifications */}
-                        <div className="admin-table-container">
+                        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #F3F4F6" }}>
                             <h3>Specifications</h3>
                             <table className="admin-table">
                                 <tbody>
@@ -227,7 +247,7 @@ const AdminBillboardDetail = () => {
                                         { label: 'Date Added',       value: billboard.created_at ? new Date(billboard.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—' },
                                     ].map(row => (
                                         <tr key={row.label}>
-                                            <td style={{ color: 'var(--admin-text-muted)', fontWeight: '500', width: '40%', fontSize: '13px' }}>{row.label}</td>
+                                            <td style={{ color: '#6B7280', fontWeight: '500', width: '40%', fontSize: '13px' }}>{row.label}</td>
                                             <td style={{ fontWeight: '600', fontSize: '14px' }}>{row.value}</td>
                                         </tr>
                                     ))}
@@ -237,17 +257,17 @@ const AdminBillboardDetail = () => {
 
                         {/* Description */}
                         {billboard.description && (
-                            <div className="admin-table-container">
+                            <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #F3F4F6" }}>
                                 <h3>Description</h3>
-                                <p style={{ color: 'var(--admin-text-muted)', lineHeight: '1.7', margin: 0, fontSize: '14px' }}>{billboard.description}</p>
+                                <p style={{ color: '#6B7280', lineHeight: '1.7', margin: 0, fontSize: '14px' }}>{billboard.description}</p>
                             </div>
                         )}
 
                         {/* Legal Documents */}
-                        <div className="admin-table-container">
+                        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #F3F4F6" }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                                 <h3 style={{ margin: 0 }}>Legal Documents</h3>
-                                <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--admin-primary-green)', background: '#ECFDF5', padding: '4px 10px', borderRadius: '12px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#667B68', background: '#ECFDF5', padding: '4px 10px', borderRadius: '12px' }}>
                                     {billboard.documents?.length || 0} Attached
                                 </span>
                             </div>
@@ -261,10 +281,10 @@ const AdminBillboardDetail = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                     {billboard.documents.map((doc, idx) => (
                                         <div key={doc.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#fff', borderRadius: '14px', border: '1px solid #F3F4F6', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
-                                            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--admin-primary-green)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#667B68'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                                             onMouseLeave={e => { e.currentTarget.style.borderColor = '#F3F4F6'; e.currentTarget.style.transform = 'none'; }}>
                                             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: doc.file?.toLowerCase().endsWith('.pdf') ? '#FEF2F2' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
-                                                {doc.file?.toLowerCase().endsWith('.pdf') ? '<Book width={20} height={20} />' : '<Image width={20} height={20} />'}
+                                                {doc.file?.toLowerCase().endsWith('.pdf') ? <Book width={20} height={20} /> : <Image width={20} height={20} />}
                                             </div>
                                             <div style={{ flex: 1, overflow: 'hidden' }}>
                                                 <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -274,7 +294,7 @@ const AdminBillboardDetail = () => {
                                             </div>
                                             <a href={doc.file} target="_blank" rel="noopener noreferrer" 
                                                 style={{ padding: '8px', borderRadius: '8px', background: '#F3F4F6', color: '#4B5563', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--admin-primary-green)'; e.currentTarget.style.color = '#fff'; }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = '#667B68'; e.currentTarget.style.color = '#fff'; }}
                                                 onMouseLeave={e => { e.currentTarget.style.background = '#F3F4F6'; e.currentTarget.style.color = '#4B5563'; }}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                             </a>
@@ -285,7 +305,7 @@ const AdminBillboardDetail = () => {
                         </div>
 
                         {/* Interaction History */}
-                        <div className="admin-table-container">
+                        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #F3F4F6" }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                                 <h3 style={{ margin: 0 }}>Interaction & Review History</h3>
                                 <div style={{ fontSize: '12px', background: '#F3F4F6', padding: '4px 10px', borderRadius: '12px', color: '#6B7280', fontWeight: '600' }}>
@@ -352,7 +372,7 @@ const AdminBillboardDetail = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
                         {/* Admin controls */}
-                        <div className="admin-table-container">
+                        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #F3F4F6" }}>
                             <h3>Admin Controls</h3>
                             {billboard.status === 'pending' && (
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', marginBottom: '16px' }}>
@@ -403,7 +423,7 @@ const AdminBillboardDetail = () => {
                         </div>
 
                         {/* Owner info */}
-                        <div className="admin-table-container">
+                        <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", border: "1px solid #F3F4F6" }}>
                             <h3>Owner Details</h3>
                             <div style={{ padding: '16px', background: '#F9FAFB', borderRadius: '16px', border: '1px solid #F3F4F6', marginBottom: '12px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
@@ -447,7 +467,7 @@ const AdminBillboardDetail = () => {
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
 
             {/* Confirm modal */}
             {confirm && (
