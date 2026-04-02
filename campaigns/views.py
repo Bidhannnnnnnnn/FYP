@@ -58,6 +58,11 @@ class BookingCreateView(generics.CreateAPIView):
                 raise ValidationError("Invalid slots format. Must be JSON string.")
 
         billboard = serializer.validated_data['billboard']
+
+        # Block bookings on billboards owned by suspended accounts
+        if not billboard.owner.is_active:
+            raise ValidationError("This billboard is currently unavailable for booking.")
+
         start_date = serializer.validated_data['start_date']
         end_date = serializer.validated_data['end_date']
         slot_duration = serializer.validated_data.get('slot_duration_seconds', 10)

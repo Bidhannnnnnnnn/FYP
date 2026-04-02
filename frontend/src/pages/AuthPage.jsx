@@ -59,7 +59,6 @@ const AuthPage = () => {
         localStorage.removeItem('accessToken');
         try {
             const response = await api.post('user/login/', { email: loginEmail, password: loginPassword });
-            console.log('Login Success:', response.data);
             localStorage.setItem('showLoginToast', 'true');
             localStorage.setItem('accessToken', response.data.token.access);
             localStorage.setItem('role', response.data.role);
@@ -73,8 +72,18 @@ const AuthPage = () => {
                 navigate('/dashboard');
             }
         } catch (error) {
-            console.error('Login Failed:', error);
-            showToast('Login Failed: ' + (error.response?.data?.errors?.non_field_errors?.[0] || 'Invalid credentials.'), 'error');
+            const detail = error.response?.data?.detail || '';
+            const nonField = error.response?.data?.errors?.non_field_errors?.[0] || '';
+            // Backend returns 401 with "inactive" detail for banned users
+            if (detail.toLowerCase().includes('inactive') || nonField.toLowerCase().includes('inactive')) {
+                // Store token if provided so Banned page can fetch appeal data
+                if (error.response?.data?.token?.access) {
+                    localStorage.setItem('accessToken', error.response.data.token.access);
+                }
+                navigate('/banned');
+            } else {
+                showToast('Login Failed: ' + (nonField || detail || 'Invalid credentials.'), 'error');
+            }
         }
     };
 

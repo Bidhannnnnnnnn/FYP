@@ -38,19 +38,25 @@ class MyBillboardsListView(generics.ListAPIView):
             return Billboard.objects.all()
         return Billboard.objects.filter(owner=user)
 
-# Public listing for advertisers (approved ones only)
+# Public listing for advertisers (approved ones only, owner must be active)
 class PublicBillboardListView(generics.ListAPIView):
     serializer_class = BillboardListSerializer
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        return Billboard.objects.filter(status='approved')
+        return Billboard.objects.filter(status='approved', owner__is_active=True)
 
 # Single billboard detail
 class BillboardDetailView(generics.RetrieveAPIView):
-    queryset = Billboard.objects.all()
     serializer_class = BillboardListSerializer
     permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        # Superadmins see everything; public only sees billboards from active owners
+        user = self.request.user
+        if user.is_authenticated and user.role == 'superadmin':
+            return Billboard.objects.all()
+        return Billboard.objects.filter(owner__is_active=True)
 
 # Admin approves a billboard
 class ApproveBillboardView(generics.UpdateAPIView):
