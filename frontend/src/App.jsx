@@ -85,7 +85,7 @@ function App() {
           </Route>
         </Route>
 
-        {/* Admin Billboard Detail — standalone page with its own sidebar */}
+   
         <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>
           <Route path="/admin/billboard-detail/:id" element={<AdminBillboardDetail />} />
         </Route>

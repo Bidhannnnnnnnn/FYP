@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import './AdvertiserDashboard.css';
 import { RefreshCw } from 'lucide-react';
@@ -7,11 +7,15 @@ import { RefreshCw } from 'lucide-react';
 const BillboardManage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [billboard, setBillboard] = useState(null);
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(true);
+
+    // Only fetch when we're actually on a billboard-manage path
+    const isBillboardManagePath = location.pathname.startsWith('/billboard-manage/');
 
     // Search & Filter State for Schedule Section
     const [searchTerm, setSearchTerm] = useState('');
@@ -19,9 +23,10 @@ const BillboardManage = () => {
     const [sortBy, setSortBy] = useState('Newest');
 
     useEffect(() => {
+        if (!isBillboardManagePath) return;
         fetchBillboardData();
         fetchHistory();
-    }, [id]);
+    }, [id, isBillboardManagePath]);
 
     const fetchHistory = async () => {
         try {
@@ -35,7 +40,7 @@ const BillboardManage = () => {
     };
 
     const fetchBillboardData = async () => {
-        if (!id) return;
+        if (!id || !isBillboardManagePath) return;
         try {
             const [bbRes, bookingsRes] = await Promise.all([
                 api.get(`billboards/detail/${id}/`),
@@ -228,9 +233,9 @@ const BillboardManage = () => {
                 {/* Stats Cards */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {[
-                        { label: 'Active Campaigns', value: activeBookings.length, color: '#10B981', bg: 'linear-gradient(135deg, #D1FAE5, #ECFDF5)', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> },
-                        { label: 'Pending Requests', value: pendingBookings.length, color: '#F59E0B', bg: 'linear-gradient(135deg, #FEF3C7, #FFFBEB)', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> },
-                        { label: 'Total Revenue', value: `NRs. ${totalRevenue.toLocaleString()}`, color: '#667B68', bg: 'linear-gradient(135deg, #667B6815, #667B680A)', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#667B68" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> },
+                        { label: 'Active Campaigns', value: activeBookings.length},
+                        { label: 'Pending Requests', value: pendingBookings.length},
+                        { label: 'Total Revenue', value: `NRs. ${totalRevenue.toLocaleString()}`}
                     ].map((stat, i) => (
                         <div key={i} style={{ background: '#fff', borderRadius: '20px', padding: '24px', border: '1px solid #F3F4F6', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
                             <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

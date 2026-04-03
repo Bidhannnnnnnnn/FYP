@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import './AdvertiserDashboard.css';
 import { Calendar, Key, Lightbulb, Paperclip, XCircle } from 'lucide-react';
+import Toast from '../components/Toast';
 
 const BillboardBooking = () => {
     const { id } = useParams();
@@ -32,6 +33,13 @@ const BillboardBooking = () => {
     const [tuningSlot, setTuningSlot] = useState(null); // { date, hour }
     const tuningRef = useRef(null);
 
+    // Toast state
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const showToast = (message, type = 'success') => {
+        setToast({ show: true, message, type });
+    };
+    const dismissToast = () => setToast(t => ({ ...t, show: false }));
+
     // Pricing & Availability State
     const [estimatedPrice, setEstimatedPrice] = useState(null);
     const [calculating, setCalculating] = useState(false);
@@ -46,7 +54,7 @@ const BillboardBooking = () => {
     };
 
     const getVisibilityColor = (hour) => {
-        if (hour >= 8 && hour <= 10 || hour >= 16 && hour <= 18) return '#f5e6bfff'; // Peak
+        if (hour >= 8 && hour <= 10 || hour >= 16 && hour <= 18) return 'rgb(245, 245, 191)'; // Peak
         if (hour >= 11 && hour <= 15) return '#d6dee6ff'; // Midday
         return '#ffffff'; // Off-peak
     };
@@ -104,7 +112,7 @@ const BillboardBooking = () => {
         return dates;
     }, [startDate, endDate]);
 
-    // Prune selectedSlots when dateRange change (Fixes hidden data leakage/pricing bug)
+    // Prune selectedSlots when dateRange change
     useEffect(() => {
         if (dateRange.length > 0) {
             setSelectedSlots(prev => {
@@ -122,12 +130,22 @@ const BillboardBooking = () => {
         }
     }, [dateRange]);
 
-    // Fetch availability for the ENTIRE range whenever dates change
+    // When date changes, or maybe decreased the number of days, the hidden slots still has the previously selected slots. 
+    //Solution to that: Fetch availability for the ENTIRE range whenever dates change
     useEffect(() => {
         if (dateRange.length > 0) {
             fetchAllAvailability();
         }
     }, [dateRange, id, slotDuration, globalFrequency]);
+
+    // Change 3 — Background availability refresh every 30 seconds
+    useEffect(() => {
+        if (dateRange.length === 0) return;
+        const interval = setInterval(() => {
+            fetchAllAvailability();
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [dateRange]);
 
     const fetchAllAvailability = async () => {
         try {
@@ -234,9 +252,12 @@ const BillboardBooking = () => {
 
     const handleSubmit = async () => {
         if (formattedSlots.length === 0) {
-            alert("Please select at least one time slot.");
+            showToast("Please select at least one time slot.", 'warning');
             return;
         }
+
+        // Change 2 — Pre-flight availability refresh
+        await fetchAllAvailability();
 
         // Guard: each slot's (freq × duration) must not exceed available seconds for that hour
         for (const date in selectedSlots) {
@@ -249,7 +270,7 @@ const BillboardBooking = () => {
                 // computed remaining before this booking existed.
                 const available = slotData ? slotData.remaining_seconds + freq * slotDuration : 3600;
                 if (freq * slotDuration > available) {
-                    alert(`Overbooking at ${date} ${TIME_LABELS[hr]}: ${freq}x × ${slotDuration}s = ${freq * slotDuration}s exceeds ${available}s available. Please reduce the frequency.`);
+                    showToast(`Overbooking at ${date} ${TIME_LABELS[hr]}: ${freq}x × ${slotDuration}s = ${freq * slotDuration}s exceeds ${available}s available. Please reduce the frequency.`, 'error');
                     return;
                 }
             }
@@ -273,18 +294,40 @@ const BillboardBooking = () => {
                 await api.patch(`campaigns/bookings/${editId}/update/`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
-                alert('Revision Submitted Successfully! Waiting for re-approval.');
+                showToast('Revision Submitted Successfully! Waiting for re-approval.', 'success');
             } else {
                 await api.post('campaigns/bookings/create/', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
-                alert('Booking Successful! Waiting for owner approval.');
+                showToast('Booking Successful! Waiting for owner approval.', 'success');
             }
-            navigate('/advertiser/my-bookings');
+            setTimeout(() => navigate('/advertiser/my-bookings'), 1800);
         } catch (error) {
             console.error("Booking failed", error);
-            const msg = error.response?.data?.error || 'Booking failed.';
-            alert(msg);
+            // Change 1 — Smart conflict handling
+            if (error.response?.data?.slots) {
+                const conflictedSlots = error.response.data.slots;
+                setSelectedSlots(prev => {
+                    const updated = { ...prev };
+                    conflictedSlots.forEach(({ date, hour }) => {
+                        if (updated[date]) {
+                            const copy = { ...updated[date] };
+                            delete copy[hour];
+                            if (Object.keys(copy).length === 0) {
+                                delete updated[date];
+                            } else {
+                                updated[date] = copy;
+                            }
+                        }
+                    });
+                    return updated;
+                });
+                await fetchAllAvailability();
+                showToast(`${conflictedSlots.length} slot(s) were just booked by someone else. Your selection has been updated — please review and resubmit.`, 'warning');
+            } else {
+                const msg = error.response?.data?.error || 'Booking failed.';
+                showToast(msg, 'error');
+            }
         } finally {
             setSubmitting(false);
         }
@@ -347,6 +390,7 @@ const BillboardBooking = () => {
 
     return (
         <div className="view-container" style={{ paddingBottom: '80px' }}>
+            <Toast show={toast.show} message={toast.message} type={toast.type} onClose={dismissToast} />
             {/* Premium Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '40px' }}>
                 <button
@@ -616,7 +660,7 @@ const BillboardBooking = () => {
                         </div>
 
                         <button
-                            onClick={() => validateAllSlots() ? handleSubmit() : alert("One or more slots have expired (1hr buffer). Please refresh.")}
+                            onClick={() => validateAllSlots() ? handleSubmit() : showToast("One or more slots have expired (1hr buffer). Please refresh.", 'warning')}
                             disabled={submitting || totalHours === 0}
                             style={{
                                 width: '100%',

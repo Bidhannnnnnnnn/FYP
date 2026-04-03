@@ -352,7 +352,7 @@ const AddBillboard = () => {
                                         <p style={{ margin: 0, fontSize: '12px', color: '#9CA3AF' }}>Set your base daily rate.</p>
                                     </div>
                                 </div>
-                                <InputField label="Daily Base Rate (NRs.)" required hint={`Ask yourself: "How much do I want to earn if my billboard runs a standard 10-second ad, 10 times per hour, for a full 24 hours, on a normal weekday?" That number is your base rate. Peak hours, festive seasons, and advertiser settings multiply on top of it.`}>
+                                <InputField label="Daily Base Rate (NRs.)" required hint={`"How much do I want to earn if my billboard runs a standard 10-second ad, 10 times per hour, for a full 24 hours, on a normal weekday?" That number is your base rate. Peak hours, weekdays/weekends, and advertiser settings multiply on top of it.`}>
                                     <input name="base_price" type="number" min="0" value={formData.base_price} onChange={handleChange} placeholder="e.g. 5000" required style={inputStyle}
                                         onFocus={e => { e.target.style.borderColor = '#F59E0B'; e.target.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.1)'; }}
                                         onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.boxShadow = 'none'; }} />
@@ -472,12 +472,12 @@ const AddBillboard = () => {
                                     </select>
                                 </InputField>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                    <InputField label="Latitude" hint="e.g. 27.7172">
+                                    <InputField label="Latitude" hint="e.g. 27.7172" required>
                                         <input name="latitude" type="number" step="any" value={formData.latitude} onChange={handleChange} placeholder="27.7172" style={inputStyle}
                                             onFocus={e => { e.target.style.borderColor = '#10B981'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.1)'; }}
                                             onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.boxShadow = 'none'; }} />
                                     </InputField>
-                                    <InputField label="Longitude" hint="e.g. 85.3240">
+                                    <InputField label="Longitude" hint="e.g. 85.3240" required>
                                         <input name="longitude" type="number" step="any" value={formData.longitude} onChange={handleChange} placeholder="85.3240" style={inputStyle}
                                             onFocus={e => { e.target.style.borderColor = '#10B981'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.1)'; }}
                                             onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.boxShadow = 'none'; }} />

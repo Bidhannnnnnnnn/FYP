@@ -121,7 +121,7 @@ const Explore = ({ billboards }) => {
                 `}
             </style>
 
-            {/* Sticky Ecommerce Header */}
+            
             <div className="explore-ecommerce-header">
                 <div>
                     <h2 style={{ margin: '0', fontSize: '24px', color: '#111827', fontFamily: 'Outfit, sans-serif', fontWeight: '800' }}>

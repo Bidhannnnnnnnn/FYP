@@ -293,6 +293,99 @@ const AdvertiserDashboard = () => {
 
     // --- Sub-Components (Views) ---
 
+    const MyAds = () => (
+        <div className="view-container">
+            <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ margin: 0, fontSize: '24px', color: '#1F2937', fontFamily: 'Outfit, sans-serif', fontWeight: '700' }}>My Campaigns</h3>
+                <p style={{ margin: '4px 0 0 0', color: '#6B7280', fontSize: '14px' }}>Track and manage your active billboard advertisements.</p>
+            </div>
+            <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr style={{ textAlign: 'left', background: '#F9FAFB', borderBottom: '1px solid #F3F4F6' }}>
+                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Campaign</th>
+                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Billboard</th>
+                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Duration</th>
+                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {bookings.length === 0 ? (
+                            <tr><td colSpan="5" style={{ padding: '60px', textAlign: 'center', color: '#6B7280' }}>
+                                <div style={{ fontSize: '32px', marginBottom: '12px' }}>📋</div>
+                                <div style={{ fontWeight: '600', marginBottom: '4px' }}>No campaigns yet</div>
+                                <div style={{ fontSize: '13px' }}>Start by exploring billboards and booking your first campaign.</div>
+                            </td></tr>
+                        ) : bookings.map(booking => (
+                            <tr
+                                key={booking.id}
+                                style={{ borderBottom: '1px solid #F9FAFB', transition: 'background 0.2s', cursor: 'pointer' }}
+                                className="table-row-hover"
+                                onClick={() => navigate(`/booking/${booking.id}`)}
+                            >
+                                <td style={{ padding: '20px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', background: '#f3f4f6', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            {booking.creative_file ? (
+                                                booking.creative_file.match(/\.(mp4|webm|ogg|mov|m4v|avi|mkv)$/i)
+                                                    ? <video src={booking.creative_file} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                                                    : <img src={booking.creative_file} alt="Ad" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : <span style={{ fontSize: '10px', color: '#9ca3af' }}>No Ad</span>}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: '600', color: '#1F2937', fontSize: '14px' }}>{booking.campaign_name || 'Campaign #' + booking.campaign}</div>
+                                            <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '2px' }}>Created {new Date(booking.created_at).toLocaleDateString()}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style={{ padding: '20px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#F3F4F6', overflow: 'hidden', flexShrink: 0 }}>
+                                            {booking.billboard_details?.image
+                                                ? <img src={booking.billboard_details.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#9CA3AF' }}>BB</div>}
+                                        </div>
+                                        <div style={{ fontWeight: '500', color: '#374151', fontSize: '14px' }}>{booking.billboard_details?.title || 'Billboard #' + booking.billboard}</div>
+                                    </div>
+                                </td>
+                                <td style={{ padding: '20px' }}>
+                                    <div style={{ fontSize: '14px', color: '#374151' }}>{booking.start_date}</div>
+                                    <div style={{ fontSize: '12px', color: '#9CA3AF' }}>to {booking.end_date}</div>
+                                </td>
+                                <td style={{ padding: '20px' }}>
+                                    <span style={{
+                                        padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.02em',
+                                        background: booking.booking_status === 'approved' ? '#DCFCE7' : booking.booking_status === 'changes_requested' ? '#DBEAFE' : booking.booking_status === 'rejected' ? '#FEE2E2' : booking.booking_status === 'paid' || booking.booking_status === 'active' ? '#D1FAE5' : '#FEF3C7',
+                                        color: booking.booking_status === 'approved' ? '#166534' : booking.booking_status === 'changes_requested' ? '#1E40AF' : booking.booking_status === 'rejected' ? '#991B1B' : booking.booking_status === 'paid' || booking.booking_status === 'active' ? '#065F46' : '#92400E',
+                                    }}>
+                                        {booking.booking_status.replace('_', ' ')}
+                                    </span>
+                                    {booking.owner_remarks && (
+                                        <div style={{ marginTop: '6px', fontSize: '11px', color: '#6B7280', maxWidth: '180px', fontStyle: 'italic' }}>"{booking.owner_remarks}"</div>
+                                    )}
+                                </td>
+                                <td style={{ padding: '20px' }}>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        {booking.booking_status === 'changes_requested' && (
+                                            <button className="btn-primary" onClick={(e) => { e.stopPropagation(); navigate(`/billboard/${booking.billboard}/book?edit=${booking.id}`); }} style={{ padding: '7px 14px', fontSize: '12px', background: '#3B82F6', borderRadius: '8px' }}>Fix Issues</button>
+                                        )}
+                                        {booking.booking_status === 'approved' && (
+                                            <button className="btn-primary" onClick={(e) => handlePayment(e, booking.id)} style={{ padding: '7px 14px', fontSize: '12px', background: '#10B981', borderRadius: '8px' }}>Pay Now</button>
+                                        )}
+                                        <button style={{ padding: '6px 10px', background: 'none', border: '1px solid #E5E7EB', borderRadius: '6px', cursor: 'pointer', color: '#6B7280' }} onClick={(e) => { e.stopPropagation(); navigate(`/billboard/${booking.billboard}`); }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+
     const DashboardHome = () => (
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
@@ -466,138 +559,6 @@ const AdvertiserDashboard = () => {
                 </div>
             </div>
         </>
-    );
-
-    // ... old Explore removed ...
-
-    const MyAds = () => (
-        <div className="view-container">
-            <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ margin: 0, fontSize: '24px', color: '#1F2937' }}>My Campaigns</h3>
-                <p style={{ margin: '4px 0 0 0', color: '#6B7280', fontSize: '14px' }}>Track and manage your active billboard advertisements.</p>
-            </div>
-            <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ textAlign: 'left', background: '#F9FAFB', borderBottom: '1px solid #F3F4F6' }}>
-                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Campaign</th>
-                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Billboard</th>
-                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Duration</th>
-                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
-                            <th style={{ padding: '16px 20px', color: '#6B7280', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {bookings.length === 0 ? (
-                            <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>No campaigns found. Start by exploring billboards!</td></tr>
-                        ) : bookings.map(booking => (
-                            <tr
-                                key={booking.id}
-                                style={{ borderBottom: '1px solid #F9FAFB', transition: 'background 0.2s', cursor: 'pointer' }}
-                                className="table-row-hover"
-                                onClick={() => navigate(`/booking/${booking.id}`)}
-                            >
-                                <td style={{ padding: '20px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                        <div style={{
-                                            width: '50px',
-                                            height: '50px',
-                                            borderRadius: '8px',
-                                            overflow: 'hidden',
-                                            background: '#f3f4f6',
-                                            border: '1px solid #e5e7eb',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}>
-                                            {booking.creative_file ? (
-                                                booking.creative_file.match(/\.(mp4|webm|ogg|mov|m4v|avi|mkv)$/i) ? (
-                                                    <video src={booking.creative_file} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
-                                                ) : (
-                                                    <img src={booking.creative_file} alt="Ad" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                )
-                                            ) : (
-                                                <span style={{ fontSize: '10px', color: '#9ca3af' }}>No Ad</span>
-                                            )}
-                                        </div>
-                                        <div style={{ fontWeight: '600', color: '#1F2937' }}>{booking.campaign_name || 'Campaign #' + booking.campaign}</div>
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '4px' }}>Created {new Date(booking.created_at).toLocaleDateString()}</div>
-                                </td>
-                                <td style={{ padding: '20px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#F3F4F6', overflow: 'hidden' }}>
-                                            {booking.billboard_details?.image ? (
-                                                <img src={booking.billboard_details.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#9CA3AF' }}>BB</div>}
-                                        </div>
-                                        <div style={{ fontWeight: '500', color: '#374151' }}>{booking.billboard_details?.title || 'Billboard #' + booking.billboard}</div>
-                                    </div>
-                                </td>
-                                <td style={{ padding: '20px' }}>
-                                    <div style={{ fontSize: '14px', color: '#374151' }}>{booking.start_date}</div>
-                                    <div style={{ fontSize: '12px', color: '#9CA3AF' }}>to {booking.end_date}</div>
-                                </td>
-                                <td style={{ padding: '20px' }}>
-                                    <span style={{
-                                        padding: '6px 14px',
-                                        borderRadius: '30px',
-                                        background: booking.booking_status === 'approved' ? '#DCFCE7' :
-                                            booking.booking_status === 'changes_requested' ? '#DBEAFE' :
-                                                booking.booking_status === 'rejected' ? '#FEE2E2' : '#FEF3C7',
-                                        color: booking.booking_status === 'approved' ? '#166534' :
-                                            booking.booking_status === 'changes_requested' ? '#1E40AF' :
-                                                booking.booking_status === 'rejected' ? '#991B1B' : '#92400E',
-                                        fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.02em'
-                                    }}>
-                                        {booking.booking_status.replace('_', ' ')}
-                                    </span>
-                                    {booking.owner_remarks && (
-                                        <div style={{ marginTop: '8px', fontSize: '11px', color: '#6B7280', maxWidth: '200px', fontStyle: 'italic' }}>
-                                            "{booking.owner_remarks}"
-                                        </div>
-                                    )}
-                                </td>
-                                <td style={{ padding: '20px' }}>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        {booking.booking_status === 'changes_requested' && (
-                                            <button
-                                                className="btn-primary"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    navigate(`/billboard/${booking.billboard}/book?edit=${booking.id}`);
-                                                }}
-                                                style={{ padding: '8px 16px', fontSize: '12px', background: '#3B82F6' }}
-                                            >
-                                                Fix Issues
-                                            </button>
-                                        )}
-                                        {booking.booking_status === 'approved' && (
-                                            <button
-                                                className="btn-primary"
-                                                onClick={(e) => handlePayment(e, booking.id)}
-                                                style={{ padding: '8px 16px', fontSize: '12px', background: '#10B912' }}
-                                            >
-                                                Pay Now
-                                            </button>
-                                        )}
-                                        <button
-                                            style={{ padding: '6px 10px', background: 'none', border: '1px solid #E5E7EB', borderRadius: '6px', cursor: 'pointer', color: '#6B7280' }}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                navigate(`/billboard/${booking.billboard}`);
-                                            }}
-                                        >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
     );
 
     return (

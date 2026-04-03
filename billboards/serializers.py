@@ -70,7 +70,12 @@ class OwnerDocumentSerializer(serializers.ModelSerializer):
         read_only_fields = ['verified','verified_by']
 
 class BillboardReviewSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source='user.name', read_only=True)
+    user_name = serializers.SerializerMethodField()
+
+    def get_user_name(self, obj):
+        if obj.user:
+            return obj.user.name
+        return 'System'
     
     class Meta:
         model = BillboardReview

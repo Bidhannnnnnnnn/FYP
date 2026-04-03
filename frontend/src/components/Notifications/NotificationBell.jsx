@@ -51,19 +51,16 @@ const NotificationBell = () => {
     };
 
     const handleNotificationClick = async (n) => {
-        // Mark as read immediately
-        if (!n.is_read) {
-            await markAsRead(n.id);
-        }
+        if (!n.is_read) await markAsRead(n.id);
         setShowDropdown(false);
 
-        // Routing logic
+        const role = localStorage.getItem('role');
+        const isAdmin = role === 'superadmin';
+
         if (n.notification_type === 'booking_request' || n.notification_type === 'booking_update') {
-            if (n.target_id) navigate(`/booking/${n.target_id}`);
+            if (n.target_id) navigate(isAdmin ? `/admin/booking/${n.target_id}` : `/booking/${n.target_id}`);
         } else if (n.notification_type === 'billboard_update') {
-            if (n.target_id) navigate(`/billboard-manage/${n.target_id}`);
-        } else if (n.notification_type === 'system') {
-            // Optional: navigate('/profile') or similar, else do nothing specific
+            if (n.target_id) navigate(isAdmin ? `/admin/billboard-detail/${n.target_id}` : `/billboard-manage/${n.target_id}`);
         }
     };
 

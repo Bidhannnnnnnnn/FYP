@@ -215,7 +215,7 @@ const LandingPage = () => {
                         </ul>
                     </div>
                     <div className="footer-col">
-                        <h4>Legal</h4>
+                        <h4>Legal</h4>`
                         <ul>
                             <li><a href="#">Privacy Policy</a></li>
                             <li><a href="#">Terms of Service</a></li>

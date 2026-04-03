@@ -66,21 +66,32 @@ const BookingDetailsView = () => {
 
     const fetchBooking = async () => {
         if (!id) return;
+        const role = localStorage.getItem('role');
         try {
-            let found = null;
-            try {
-                const res = await api.get('campaigns/bookings/');
-                found = res.data.find(b => b.id === parseInt(id));
-            } catch (e) {}
-
-            if (found) {
-                setBooking(found);
-                setIsOwnerView(false);
-            } else {
+            // Owner: go straight to owner-bookings, no need to try advertiser endpoint
+            if (role === 'business' || role === 'superadmin') {
                 const resOwner = await api.get('campaigns/owner-bookings/');
                 const foundOwner = resOwner.data.find(b => b.id === parseInt(id));
                 setBooking(foundOwner || null);
                 setIsOwnerView(!!foundOwner);
+            } else {
+                // Advertiser: try own bookings first
+                let found = null;
+                try {
+                    const res = await api.get('campaigns/bookings/');
+                    found = res.data.find(b => b.id === parseInt(id));
+                } catch (e) {}
+
+                if (found) {
+                    setBooking(found);
+                    setIsOwnerView(false);
+                } else {
+                    // Fallback: maybe they're viewing as owner
+                    const resOwner = await api.get('campaigns/owner-bookings/');
+                    const foundOwner = resOwner.data.find(b => b.id === parseInt(id));
+                    setBooking(foundOwner || null);
+                    setIsOwnerView(!!foundOwner);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch booking details", error);

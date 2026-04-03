@@ -56,7 +56,7 @@ const DashboardWrapper = () => {
         }
 
         // Allow standalone billboard and booking paths for both roles
-        if (path.startsWith('/billboard') || path.startsWith('/booking')) {
+        if (path.startsWith('/billboard') || path.startsWith('/booking') || path.startsWith('/billboard-manage')) {
             return;
         }
 
@@ -91,7 +91,7 @@ const DashboardWrapper = () => {
         return <OwnerDashboard />;
     } else if (path.startsWith('/advertiser')) {
         return <AdvertiserDashboard />;
-    } else if (path.startsWith('/billboard') || path.startsWith('/booking')) {
+    } else if (path.startsWith('/billboard') || path.startsWith('/booking') || path.startsWith('/billboard-manage')) {
         if (role === 'business' || role === 'admin') {
             return <OwnerDashboard />;
         } else {
