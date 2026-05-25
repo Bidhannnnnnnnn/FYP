@@ -44,25 +44,61 @@ const BookingDetailsView = () => {
     const [loading, setLoading] = useState(true);
     const [isOwnerView, setIsOwnerView] = useState(false);
 
+    // Get current user role from localStorage
+    const userRole = localStorage.getItem('role')?.trim().toLowerCase();
+    const isSuperAdmin = userRole === 'superadmin';
+
     // Action state
     const [actionLoading, setActionLoading] = useState(false);
     const [remarks, setRemarks] = useState('');
     const [showRemarksFor, setShowRemarksFor] = useState(null);
     const [paying, setPaying] = useState(false);
+    const [payError, setPayError] = useState(null);
 
     const { timeLeft, expired } = useCountdown(booking?.payment_deadline);
 
+    // Compute VAT breakdown for display (client-side, matches backend logic)
+    const computeVatDisplay = (total) => {
+        const t = parseFloat(total || 0);
+        const vat = Math.round((t * 13 / 113) * 100) / 100;
+        const base = Math.round((t - vat) * 100) / 100;
+        return { total: t.toFixed(2), vat: vat.toFixed(2), base: base.toFixed(2) };
+    };
+
     const handlePay = async () => {
         setPaying(true);
+        setPayError(null);
+        // Store booking id for failure page recovery
+        localStorage.setItem('esewa_pending_booking_id', id);
         try {
-            await api.post(`campaigns/bookings/${id}/pay/`);
-            await fetchBooking();
+            const res = await api.post(`campaigns/bookings/${id}/esewa/initiate/`);
+            const params = res.data;
+
+            // Construct and auto-submit hidden-input form to eSewa
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = params.esewa_payment_url;
+
+            const fields = [
+                'amount', 'tax_amount', 'total_amount', 'transaction_uuid',
+                'product_code', 'product_service_charge', 'product_delivery_charge',
+                'success_url', 'failure_url', 'signed_field_names', 'signature'
+            ];
+            fields.forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = params[key];
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
         } catch (err) {
-            alert(err.response?.data?.error || 'Payment failed.');
-        } finally {
+            setPayError(err.response?.data?.error || 'Failed to initiate payment. Please try again.');
             setPaying(false);
         }
-    }; // 'reject' | 'revise' | null
+    };
 
     const fetchBooking = async () => {
         if (!id) return;
@@ -219,27 +255,55 @@ const BookingDetailsView = () => {
                             </div>
                         </div>
                         {!expired && (
-                            <button
-                                onClick={handlePay}
-                                disabled={paying}
-                                style={{
-                                    padding: '12px 28px',
-                                    borderRadius: '12px',
-                                    border: 'none',
-                                    background: '#667B68',
-                                    color: '#fff',
-                                    fontWeight: '800',
-                                    fontSize: '15px',
-                                    cursor: paying ? 'not-allowed' : 'pointer',
-                                    whiteSpace: 'nowrap',
-                                    boxShadow: '0 4px 12px rgba(102,123,104,0.3)'
-                                }}
-                            >
-                                {paying ? 'Processing...' : '💳 Pay Now — NRs. ' + Number(price_calculated).toLocaleString()}
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                                {/* VAT Breakdown */}
+                                {(() => {
+                                    const vat = computeVatDisplay(price_calculated);
+                                    return (
+                                        <div style={{ fontSize: '12px', color: '#92400E', textAlign: 'right', lineHeight: '1.6' }}>
+                                            <div>Total: <strong>NRs. {vat.total}</strong></div>
+                                            <div style={{ color: '#B45309' }}>Base: NRs. {vat.base} + VAT (13%): NRs. {vat.vat}</div>
+                                        </div>
+                                    );
+                                })()}
+                                {payError && (
+                                    <div style={{ fontSize: '12px', color: '#DC2626', maxWidth: '260px', textAlign: 'right' }}>
+                                        {payError}
+                                    </div>
+                                )}
+                                <button
+                                    onClick={handlePay}
+                                    disabled={paying}
+                                    style={{
+                                        padding: '12px 28px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        background: paying ? '#9CA3AF' : '#667B68',
+                                        color: '#fff',
+                                        fontWeight: '800',
+                                        fontSize: '15px',
+                                        cursor: paying ? 'not-allowed' : 'pointer',
+                                        whiteSpace: 'nowrap',
+                                        boxShadow: paying ? 'none' : '0 4px 12px rgba(102,123,104,0.3)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                    }}
+                                >
+                                    {paying ? (
+                                        <>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 0.8s linear infinite' }}><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+                                            Redirecting to eSewa…
+                                        </>
+                                    ) : (
+                                        <>💳 Pay with eSewa — NRs. {Number(price_calculated).toLocaleString()}</>
+                                    )}
+                                </button>
+                            </div>
                         )}
                     </div>
                 )}
+                <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
 
                 {/* Main Content Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: '40px', marginBottom: '40px' }}>
@@ -304,8 +368,8 @@ const BookingDetailsView = () => {
                     </div>
                 </div>
 
-                {/* Owner Actions */}
-                {isOwnerView && booking_status === 'pending' && (
+                {/* Owner Actions - Only show for billboard owners, not superadmins */}
+                {isOwnerView && !isSuperAdmin && booking_status === 'pending' && (
                     <div style={{ background: '#F9FAFB', borderRadius: '20px', padding: '28px', border: '1.5px solid #E5E7EB', marginBottom: '32px' }}>
                         <h4 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '700', color: '#111827' }}>Review this Booking</h4>
 

@@ -103,16 +103,50 @@ const AddBillboard = () => {
         const { name, value, files } = e.target;
         if (name === 'image') {
             const file = files[0];
-            setFormData(prev => ({ ...prev, image: file }));
-            if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => setImagePreview(reader.result);
-                reader.readAsDataURL(file);
-            } else {
-                setImagePreview(null);
-            }
+            handleImageFile(file);
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleImageFile = (file) => {
+        if (!file) {
+            setImagePreview(null);
+            setFormData(prev => ({ ...prev, image: null }));
+            return;
+        }
+
+        // Validate file size (10MB max)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+            showToast(`Image too large! Maximum size is 10MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`, 'error');
+            return;
+        }
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            showToast('Please upload a valid image file (PNG, JPG, WEBP)', 'error');
+            return;
+        }
+
+        setFormData(prev => ({ ...prev, image: file }));
+        const reader = new FileReader();
+        reader.onloadend = () => setImagePreview(reader.result);
+        reader.readAsDataURL(file);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            handleImageFile(files[0]);
         }
     };
 
@@ -432,6 +466,8 @@ const AddBillboard = () => {
                                     tabIndex={0}
                                     onClick={() => fileInputRef.current && fileInputRef.current.click()}
                                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current && fileInputRef.current.click(); } }}
+                                    onDragOver={handleDragOver}
+                                    onDrop={handleDrop}
                                     style={{ display: 'block', border: imagePreview ? 'none' : '2.5px dashed #D1D5DB', borderRadius: '20px', padding: imagePreview ? 0 : '48px 24px', background: imagePreview ? '#000' : '#F9FAFB', cursor: 'pointer', textAlign: 'center', position: 'relative', overflow: 'hidden', minHeight: '280px', transition: 'all 0.2s' }}
                                     onMouseEnter={e => { if (!imagePreview) e.currentTarget.style.borderColor = '#667B68'; }}
                                     onMouseLeave={e => { if (!imagePreview) e.currentTarget.style.borderColor = '#D1D5DB'; }}

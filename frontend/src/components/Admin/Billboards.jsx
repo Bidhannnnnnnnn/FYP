@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { AlertTriangle, Check, Edit, Image, Lock, Sparkles } from 'lucide-react';
+import Pagination from '../Pagination';
 
 const AdminBillboards = () => {
     const navigate = useNavigate();
@@ -11,6 +12,10 @@ const AdminBillboards = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [confirm, setConfirm]       = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const fetchBillboards = async () => {
         setLoading(true);
@@ -40,6 +45,18 @@ const AdminBillboards = () => {
         }
         return list;
     }, [billboards, search, statusFilter]);
+
+    // Pagination logic for filtered results
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const paginatedBillboards = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filtered.slice(startIndex, startIndex + itemsPerPage);
+    }, [filtered, currentPage, itemsPerPage]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, statusFilter]);
 
     const performAction = async () => {
         if (!confirm) return;
@@ -205,7 +222,7 @@ const AdminBillboards = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map(b => (
+                            {paginatedBillboards.map(b => (
                                 <tr key={b.id} onClick={() => navigate(`/admin/billboard-detail/${b.id}`)} style={{ cursor: 'pointer', transition: 'background 0.2s' }}>
                                     <td style={{ paddingLeft: '24px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -285,6 +302,17 @@ const AdminBillboards = () => {
                     </table>
                 )}
             </div>
+
+            {/* Pagination */}
+            {filtered.length > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={filtered.length}
+                />
+            )}
 
             {/* Interactive Confirmation Modal */}
             {confirm && (

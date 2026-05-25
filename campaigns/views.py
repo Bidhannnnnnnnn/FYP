@@ -15,6 +15,13 @@ from rest_framework.views import APIView
 from .permissions import IsAdvertiser, IsBookingBillboardOwner
 from billboards.models import Billboard
 from datetime import datetime, timedelta
+import time
+import hmac
+import hashlib
+import base64
+from django.conf import settings
+from django.utils import timezone
+from .utils import compute_vat_breakdown, generate_signature, parse_booking_id
 
 # ============ ADVERTISER VIEWS ============
 
@@ -370,8 +377,6 @@ class BookingApprovalView(generics.UpdateAPIView):
         }, status=status.HTTP_200_OK)
 
 
-from django.utils import timezone
-
 class OwnerOccupancyStatsView(APIView):
     """
     Provides occupancy statistics for billboards owned by the authenticated user.
@@ -497,33 +502,225 @@ class OwnerOccupancyStatsView(APIView):
 
 class PayBookingView(APIView):
     """
-    Endpoint for advertisers to pay for an approved booking.
+    DEPRECATED — kept for reference only. Use EsewaInitiatePaymentView instead.
+    This endpoint previously simulated payment by directly setting booking_status='paid'.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
+        return Response(
+            {'error': 'Direct payment is no longer supported. Please use eSewa payment.'},
+            status=status.HTTP_410_GONE
+        )
+
+
+class EsewaInitiatePaymentView(APIView):
+    """
+    Generates signed eSewa ePay-v2 payment parameters for an approved booking.
+    The frontend uses these to auto-submit a form directly to eSewa's payment page.
+
+    POST /api/campaigns/bookings/<pk>/esewa/initiate/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        # 1. Fetch booking
         try:
-            booking = Booking.objects.get(pk=pk)
-            
-            # Verify the user owns the campaign for this booking
-            if booking.campaign.advertiser != request.user:
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied("You can only pay for your own bookings.")
-                
-            # Verify booking is in 'approved' status
-            if booking.booking_status != 'approved':
-                return Response({'error': 'Booking must be approved before payment.'}, status=status.HTTP_400_BAD_REQUEST)
-                
-            # Simulate payment processing success
-            booking.booking_status = 'paid'
-            booking.save()
-            
-            return Response({'msg': 'Payment successful', 'booking_status': booking.booking_status}, status=status.HTTP_200_OK)
-            
+            booking = Booking.objects.select_related(
+                'campaign__advertiser', 'billboard'
+            ).get(pk=pk)
         except Booking.DoesNotExist:
             return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
+
+        # 2. Ownership check
+        if booking.campaign.advertiser != request.user:
+            return Response(
+                {'error': 'You can only pay for your own bookings.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 3. Status check
+        if booking.booking_status != 'approved':
+            return Response(
+                {'error': 'Booking must be in approved status to initiate payment.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 4. Deadline check
+        if booking.payment_deadline and timezone.now() > booking.payment_deadline:
+            # Mark as payment_failed and clear slots
+            booking.booking_status = 'payment_failed'
+            booking.owner_remarks = (
+                f"Payment deadline expired on {booking.payment_deadline.strftime('%Y-%m-%d %H:%M')}. "
+                "Booking automatically cancelled."
+            )
+            booking.save()
+            
+            # Delete booking slots to free up capacity
+            BookingSlot.objects.filter(booking=booking).delete()
+            
+            return Response(
+                {'error': 'Payment deadline has passed. This booking has been cancelled and slots released.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 5. Compute VAT breakdown
+        total_amount = booking.price_calculated
+        base_amount, vat_amount = compute_vat_breakdown(total_amount)
+
+        # 6. Generate transaction UUID
+        transaction_uuid = f"BIMBASETU-{pk}-{int(time.time() * 1000)}"
+
+        # 7. Build eSewa params
+        product_code = settings.ESEWA_PRODUCT_CODE
+        total_str = str(total_amount)
+        signature = generate_signature(total_str, transaction_uuid, product_code)
+
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+
+        return Response({
+            'amount': str(base_amount),
+            'tax_amount': str(vat_amount),
+            'total_amount': total_str,
+            'transaction_uuid': transaction_uuid,
+            'product_code': product_code,
+            'product_service_charge': '0',
+            'product_delivery_charge': '0',
+            'success_url': f"{frontend_url}/payment/success",
+            'failure_url': f"{frontend_url}/payment/failure",
+            'signed_field_names': 'total_amount,transaction_uuid,product_code',
+            'signature': signature,
+            'esewa_payment_url': settings.ESEWA_PAYMENT_URL,
+            # Extra fields for frontend display
+            'base_amount': str(base_amount),
+            'booking_id': pk,
+        }, status=status.HTTP_200_OK)
+
+
+class EsewaVerifyPaymentView(APIView):
+    """
+    Verifies the eSewa payment callback and marks the booking as paid.
+    Called by the frontend after eSewa redirects to /payment/success.
+
+    POST /api/campaigns/bookings/esewa/verify/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+
+        # 1. Validate required fields
+        required = ['transaction_code', 'status', 'total_amount',
+                    'transaction_uuid', 'product_code', 'signed_field_names', 'signature']
+        missing = [f for f in required if not data.get(f)]
+        if missing:
+            return Response(
+                {'error': f"Missing required fields: {', '.join(missing)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        transaction_uuid = data['transaction_uuid']
+        total_amount = data['total_amount']
+        product_code = data['product_code']
+        transaction_code = data['transaction_code']
+        status_value = data['status']
+        signed_field_names = data['signed_field_names']
+        received_signature = data['signature']
+
+        # 2. Parse booking ID from transaction_uuid
+        try:
+            booking_id = parse_booking_id(transaction_uuid)
+        except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 3. Fetch booking
+        try:
+            booking = Booking.objects.select_related('campaign__advertiser').get(pk=booking_id)
+        except Booking.DoesNotExist:
+            return Response({'error': 'Booking not found.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 4. Verify HMAC-SHA256 signature
+        # According to eSewa docs, response signature uses all signed_field_names
+        # Format: "transaction_code={value},status={value},total_amount={value},transaction_uuid={value},product_code={value},signed_field_names={value}"
+        message_parts = []
+        for field_name in signed_field_names.split(','):
+            field_value = data.get(field_name, '')
+            message_parts.append(f"{field_name}={field_value}")
+        
+        message = ','.join(message_parts)
+        secret = settings.ESEWA_SECRET_KEY.encode('utf-8')
+        digest = hmac.new(secret, message.encode('utf-8'), hashlib.sha256).digest()
+        expected_signature = base64.b64encode(digest).decode('utf-8')
+        
+        if not hmac.compare_digest(expected_signature, received_signature):
+            # Log for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Signature mismatch - Expected: {expected_signature}, Received: {received_signature}")
+            logger.error(f"Message used: {message}")
+            
+            return Response(
+                {'error': 'Payment signature verification failed.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 5. Status guard — handle idempotency
+        if booking.booking_status == 'paid':
+            # Already paid - this is a duplicate verification request (e.g., from React Strict Mode)
+            # Return success to prevent UI errors
+            return Response({
+                'msg': 'Payment already verified.',
+                'booking_status': booking.booking_status,
+                'booking_id': booking.id,
+            }, status=status.HTTP_200_OK)
+        
+        if booking.booking_status != 'approved':
+            return Response(
+                {'error': 'Booking is not in approved status.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 6. Deadline guard
+        if booking.payment_deadline and timezone.now() > booking.payment_deadline:
+            # Mark as payment_failed and clear slots
+            booking.booking_status = 'payment_failed'
+            booking.owner_remarks = (
+                f"Payment deadline expired on {booking.payment_deadline.strftime('%Y-%m-%d %H:%M')}. "
+                "Booking automatically cancelled."
+            )
+            booking.save()
+            
+            # Delete booking slots to free up capacity
+            BookingSlot.objects.filter(booking=booking).delete()
+            
+            return Response(
+                {'error': 'Payment deadline has passed. This booking has been cancelled.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 7. Mark as paid and store VAT breakdown + platform commission
+        from decimal import Decimal
+        
+        base_amount, vat_amount = compute_vat_breakdown(booking.price_calculated)
+        
+        # Platform takes 5% commission from base amount (after VAT)
+        # Use Decimal for all calculations to avoid type errors
+        platform_commission = round(base_amount * Decimal('0.05'), 2)
+        
+        # Owner receives 95% of base amount (after VAT and commission)
+        owner_payout = round(base_amount - platform_commission, 2)
+        
+        booking.booking_status = 'paid'
+        booking.vat_amount = vat_amount
+        booking.platform_commission = platform_commission
+        booking.owner_payout_amount = owner_payout
+        booking.save()
+
+        return Response({
+            'msg': 'Payment verified successfully.',
+            'booking_status': booking.booking_status,
+            'booking_id': booking.id,
+        }, status=status.HTTP_200_OK)
 
 class DownloadReportView(APIView):
     """

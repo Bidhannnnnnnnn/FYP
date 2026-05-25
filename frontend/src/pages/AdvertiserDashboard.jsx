@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, NavLink } from 'react-router-dom';
 import api from '../services/api';
 import './AdvertiserDashboard.css';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import Pagination from '../components/Pagination';
 
 const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6'];
 
@@ -97,6 +98,8 @@ const AdvertiserDashboard = () => {
     });
     const [revenuePeriod, setRevenuePeriod] = useState('monthly');
     const [selectedBillboardId, setSelectedBillboardId] = useState('');
+    const [customFrom, setCustomFrom] = useState('');
+    const [customTo, setCustomTo] = useState('');
     const [loading, setLoading] = useState(true);
 
     // UI State
@@ -123,7 +126,10 @@ const AdvertiserDashboard = () => {
 
             // 4. Derive Stats
             const activeBookings = bookingsRes.data.filter(b => b.booking_status === 'approved' || b.booking_status === 'pending').length;
-            const totalInvested = bookingsRes.data.reduce((acc, curr) => acc + parseFloat(curr.price_calculated || 0), 0);
+            // Only count paid and active bookings as invested (exclude approved, pending, payment_failed, rejected)
+            const totalInvested = bookingsRes.data
+                .filter(b => b.booking_status === 'paid' || b.booking_status === 'active')
+                .reduce((acc, curr) => acc + parseFloat(curr.price_calculated || 0), 0);
 
             const totalDays = bookingsRes.data.reduce((acc, curr) => {
                 if (curr.booking_status === 'approved' || curr.booking_status === 'pending') {
@@ -169,7 +175,7 @@ const AdvertiserDashboard = () => {
     };
 
     useEffect(() => {
-        // Check for login toast flag from AuthPage/Login
+        // Check for login toast flag from AuthPage/Login.
         if (localStorage.getItem('showLoginToast') === 'true') {
             const role = localStorage.getItem('role') || 'Advertiser';
             setToast({
@@ -226,6 +232,24 @@ const AdvertiserDashboard = () => {
                     Spending: 0, _start: weekStart, _end: new Date(weekStart.getTime() + 7 * 86400000)
                 });
             }
+        } else if (revenuePeriod === 'custom' && customFrom && customTo) {
+            // Custom range: one bucket per day between from and to
+            const fromDate = new Date(customFrom);
+            const toDate = new Date(customTo);
+            toDate.setHours(23, 59, 59, 999);
+            let cursor = new Date(fromDate);
+            cursor.setHours(0, 0, 0, 0);
+            while (cursor <= toDate) {
+                const d = new Date(cursor);
+                spendingData.push({
+                    name: d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+                    fullDate: d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    Spending: 0,
+                    _start: new Date(d),
+                    _end: new Date(d.getTime() + 86400000)
+                });
+                cursor.setDate(cursor.getDate() + 1);
+            }
         } else {
             const monthsStr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             for (let i = 11; i >= 0; i--) {
@@ -240,12 +264,40 @@ const AdvertiserDashboard = () => {
         }
 
         filteredBookings.forEach(b => {
-            if (['approved', 'active', 'paid'].includes(b.booking_status) && b.created_at) {
+            // Only include paid and active bookings in spending chart (exclude approved, pending, payment_failed, rejected)
+            if (['active', 'paid'].includes(b.booking_status) && b.start_date && b.end_date) {
                 try {
-                    const bDate = new Date(b.created_at);
                     const cost = parseFloat(b.price_calculated) || 0;
-                    const bucket = spendingData.find(d => bDate >= d._start && bDate < d._end);
-                    if (bucket) bucket.Spending += cost;
+                    const runStart = new Date(b.start_date);
+                    const runEnd = new Date(b.end_date);
+                    runEnd.setHours(23, 59, 59, 999); // include the full end day
+
+                    if (revenuePeriod === 'hourly') {
+                        // For hourly: spread cost across booked slots on today
+                        const bookedSlots = b.slots || [];
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const todaySlots = bookedSlots.filter(s => s.date === todayStr);
+                        const totalSlots = bookedSlots.length || 1;
+                        const costPerSlot = cost / totalSlots;
+                        todaySlots.forEach(s => {
+                            const bucket = spendingData.find(d => d._start.getHours() === s.hour);
+                            if (bucket) bucket.Spending += costPerSlot;
+                        });
+                    } else {
+                        // For daily/weekly/monthly: spread cost evenly across run days
+                        const totalMs = runEnd.getTime() - runStart.getTime();
+                        const totalDays = Math.max(1, Math.ceil(totalMs / 86400000));
+                        const costPerDay = cost / totalDays;
+
+                        // Walk each day of the campaign and add to the matching bucket
+                        let cursor = new Date(runStart);
+                        cursor.setHours(0, 0, 0, 0);
+                        while (cursor <= runEnd) {
+                            const bucket = spendingData.find(d => cursor >= d._start && cursor < d._end);
+                            if (bucket) bucket.Spending += costPerDay;
+                            cursor.setDate(cursor.getDate() + 1);
+                        }
+                    }
                 } catch (e) { }
             }
         });
@@ -256,7 +308,7 @@ const AdvertiserDashboard = () => {
             ...prev,
             monthlySpending: finalSpendingData
         }));
-    }, [bookings, revenuePeriod, selectedBillboardId]);
+    }, [bookings, revenuePeriod, selectedBillboardId, customFrom, customTo]);
 
     const handleLogout = () => {
         setToast({ show: true, message: 'Logging out...', type: 'error' });
@@ -293,12 +345,63 @@ const AdvertiserDashboard = () => {
 
     // --- Sub-Components (Views) ---
 
-    const MyAds = () => (
+    const MyAds = () => {
+        // Status filter state
+        const [statusFilter, setStatusFilter] = useState('All');
+        
+        // Pagination state
+        const [currentPage, setCurrentPage] = useState(1);
+        const itemsPerPage = 10;
+
+        // Filter bookings by status
+        const filteredBookings = useMemo(() => {
+            if (statusFilter === 'All') return bookings;
+            return bookings.filter(b => {
+                const normalizedStatus = b.booking_status.replace('_', ' ').toLowerCase();
+                return normalizedStatus === statusFilter.toLowerCase();
+            });
+        }, [bookings, statusFilter]);
+
+        // Pagination logic
+        const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+        const paginatedBookings = useMemo(() => {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            return filteredBookings.slice(startIndex, startIndex + itemsPerPage);
+        }, [filteredBookings, currentPage]);
+
+        // Reset to page 1 when filter changes
+        useEffect(() => {
+            setCurrentPage(1);
+        }, [statusFilter]);
+
+        return (
         <div className="view-container">
             <div style={{ marginBottom: '24px' }}>
                 <h3 style={{ margin: 0, fontSize: '24px', color: '#1F2937', fontFamily: 'Outfit, sans-serif', fontWeight: '700' }}>My Campaigns</h3>
                 <p style={{ margin: '4px 0 0 0', color: '#6B7280', fontSize: '14px' }}>Track and manage your active billboard advertisements.</p>
             </div>
+
+            {/* Status Filter */}
+            <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <label style={{ fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>Filter by Status:</label>
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none', background: 'white', cursor: 'pointer' }}
+                >
+                    <option value="All">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Active">Active</option>
+                    <option value="Changes Requested">Changes Requested</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+                <span style={{ fontSize: '13px', color: '#9CA3AF' }}>
+                    Showing {filteredBookings.length} of {bookings.length} campaigns
+                </span>
+            </div>
+
             <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
@@ -311,13 +414,19 @@ const AdvertiserDashboard = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {bookings.length === 0 ? (
+                        {paginatedBookings.length === 0 ? (
                             <tr><td colSpan="5" style={{ padding: '60px', textAlign: 'center', color: '#6B7280' }}>
                                 <div style={{ fontSize: '32px', marginBottom: '12px' }}>📋</div>
-                                <div style={{ fontWeight: '600', marginBottom: '4px' }}>No campaigns yet</div>
-                                <div style={{ fontSize: '13px' }}>Start by exploring billboards and booking your first campaign.</div>
+                                <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                                    {statusFilter === 'All' ? 'No campaigns yet' : `No ${statusFilter.toLowerCase()} campaigns`}
+                                </div>
+                                <div style={{ fontSize: '13px' }}>
+                                    {statusFilter === 'All' 
+                                        ? 'Start by exploring billboards and booking your first campaign.'
+                                        : 'Try selecting a different status filter.'}
+                                </div>
                             </td></tr>
-                        ) : bookings.map(booking => (
+                        ) : paginatedBookings.map(booking => (
                             <tr
                                 key={booking.id}
                                 style={{ borderBottom: '1px solid #F9FAFB', transition: 'background 0.2s', cursor: 'pointer' }}
@@ -356,10 +465,28 @@ const AdvertiserDashboard = () => {
                                 <td style={{ padding: '20px' }}>
                                     <span style={{
                                         padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.02em',
-                                        background: booking.booking_status === 'approved' ? '#DCFCE7' : booking.booking_status === 'changes_requested' ? '#DBEAFE' : booking.booking_status === 'rejected' ? '#FEE2E2' : booking.booking_status === 'paid' || booking.booking_status === 'active' ? '#D1FAE5' : '#FEF3C7',
-                                        color: booking.booking_status === 'approved' ? '#166534' : booking.booking_status === 'changes_requested' ? '#1E40AF' : booking.booking_status === 'rejected' ? '#991B1B' : booking.booking_status === 'paid' || booking.booking_status === 'active' ? '#065F46' : '#92400E',
+                                        background: (() => {
+                                            const isExpired = booking.booking_status === 'approved' && booking.payment_deadline && new Date(booking.payment_deadline) < new Date();
+                                            if (isExpired) return '#FEE2E2';
+                                            if (booking.booking_status === 'approved') return '#DCFCE7';
+                                            if (booking.booking_status === 'changes_requested') return '#DBEAFE';
+                                            if (booking.booking_status === 'rejected') return '#FEE2E2';
+                                            if (booking.booking_status === 'paid' || booking.booking_status === 'active') return '#D1FAE5';
+                                            return '#FEF3C7';
+                                        })(),
+                                        color: (() => {
+                                            const isExpired = booking.booking_status === 'approved' && booking.payment_deadline && new Date(booking.payment_deadline) < new Date();
+                                            if (isExpired) return '#991B1B';
+                                            if (booking.booking_status === 'approved') return '#166534';
+                                            if (booking.booking_status === 'changes_requested') return '#1E40AF';
+                                            if (booking.booking_status === 'rejected') return '#991B1B';
+                                            if (booking.booking_status === 'paid' || booking.booking_status === 'active') return '#065F46';
+                                            return '#92400E';
+                                        })(),
                                     }}>
-                                        {booking.booking_status.replace('_', ' ')}
+                                        {booking.booking_status === 'approved' && booking.payment_deadline && new Date(booking.payment_deadline) < new Date()
+                                            ? 'Payment Expired'
+                                            : booking.booking_status.replace('_', ' ')}
                                     </span>
                                     {booking.owner_remarks && (
                                         <div style={{ marginTop: '6px', fontSize: '11px', color: '#6B7280', maxWidth: '180px', fontStyle: 'italic' }}>"{booking.owner_remarks}"</div>
@@ -370,8 +497,11 @@ const AdvertiserDashboard = () => {
                                         {booking.booking_status === 'changes_requested' && (
                                             <button className="btn-primary" onClick={(e) => { e.stopPropagation(); navigate(`/billboard/${booking.billboard}/book?edit=${booking.id}`); }} style={{ padding: '7px 14px', fontSize: '12px', background: '#3B82F6', borderRadius: '8px' }}>Fix Issues</button>
                                         )}
-                                        {booking.booking_status === 'approved' && (
-                                            <button className="btn-primary" onClick={(e) => handlePayment(e, booking.id)} style={{ padding: '7px 14px', fontSize: '12px', background: '#10B981', borderRadius: '8px' }}>Pay Now</button>
+                                        {booking.booking_status === 'approved' && !(booking.payment_deadline && new Date(booking.payment_deadline) < new Date()) && (
+                                            <button className="btn-primary" onClick={(e) => { e.stopPropagation(); navigate(`/booking/${booking.id}`); }} style={{ padding: '7px 14px', fontSize: '12px', background: '#667B68', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
+                                                Continue to Payment
+                                            </button>
                                         )}
                                         <button style={{ padding: '6px 10px', background: 'none', border: '1px solid #E5E7EB', borderRadius: '6px', cursor: 'pointer', color: '#6B7280' }} onClick={(e) => { e.stopPropagation(); navigate(`/billboard/${booking.billboard}`); }}>
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -383,8 +513,20 @@ const AdvertiserDashboard = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination */}
+            {filteredBookings.length > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={filteredBookings.length}
+                />
+            )}
         </div>
-    );
+        );
+    };
 
     const DashboardHome = () => (
         <>
@@ -417,27 +559,21 @@ const AdvertiserDashboard = () => {
                         <span className="stat-label">Total Active Days</span>
                         <div className="stat-value">{stats.totalActiveDays}</div>
                     </div>
-                    {/* <div className="stat-icon-bg">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    </div> */}
+                    
                 </div>
                 <div className="stat-card">
                     <div className="stat-content">
                         <span className="stat-label">Active Campaigns</span>
                         <div className="stat-value">{stats.activeBillboards}</div>
                     </div>
-                    {/* <div className="stat-icon-bg">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                    </div> */}
+                    
                 </div>
                 <div className="stat-card">
                     <div className="stat-content">
                         <span className="stat-label">Invested NRs.</span>
                         <div className="stat-value">{stats.invested.toLocaleString()}</div>
                     </div>
-                    {/* <div className="stat-icon-bg">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                    </div> */}
+                    
                 </div>
             </div>
 

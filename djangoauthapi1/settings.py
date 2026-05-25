@@ -218,3 +218,21 @@ CORS_ALLOWED_ORIGINS=[
     'http://127.0.0.1:3000',
     'http://localhost:5173',
 ]
+
+# Frontend base URL — used in email notification links and payment redirects
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
+# eSewa Payment Gateway Configuration
+# For sandbox/testing (RC - Release Candidate), use: https://rc-epay.esewa.com.np/api/epay/main/v2/form
+# For production, use: https://epay.esewa.com.np/api/epay/main/v2/form
+ESEWA_SECRET_KEY = os.environ.get('ESEWA_SECRET_KEY', '8gBm/:&EnhH.1/q')
+ESEWA_PRODUCT_CODE = os.environ.get('ESEWA_PRODUCT_CODE', 'EPAYTEST')
+ESEWA_PAYMENT_URL = os.environ.get(
+    'ESEWA_PAYMENT_URL',
+    'https://rc-epay.esewa.com.np/api/epay/main/v2/form'  # RC (sandbox) URL for testing
+)
+# Status check API URLs
+ESEWA_STATUS_CHECK_URL = os.environ.get(
+    'ESEWA_STATUS_CHECK_URL',
+    'https://rc.esewa.com.np/api/epay/transaction/status/'  # RC (sandbox) URL for testing
+)

@@ -37,6 +37,7 @@ class Booking(models.Model):
         ('rejected', 'Rejected'),
         ('paid', 'Paid'),
         ('active', 'Active'),
+        ('payment_failed', 'Payment Failed'),
     )
     
     CREATIVE_STATUS_CHOICES = (
@@ -74,7 +75,24 @@ class Booking(models.Model):
     booking_status = models.CharField(max_length=20, choices=BOOKING_STATUS_CHOICES, default='pending')
     owner_remarks = models.TextField(blank=True, help_text="Owner's feedback or rejection reason")
     payment_deadline = models.DateTimeField(null=True, blank=True, help_text="Deadline for payment after approval")
-    
+
+    # Payment breakdown — populated on successful eSewa payment verification
+    vat_amount = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        null=True, blank=True,
+        help_text="VAT portion (13%) reverse-extracted from price_calculated on payment"
+    )
+    platform_commission = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        null=True, blank=True,
+        help_text="Platform commission (5% of base amount after VAT)"
+    )
+    owner_payout_amount = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        null=True, blank=True,
+        help_text="Net amount payable to billboard owner (base_amount - platform_commission)"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

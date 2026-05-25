@@ -296,9 +296,10 @@ const OwnerDashboard = () => {
 
             // 4. Derive Stats
             const pending = bookingsRes.data.filter(b => b.booking_status === 'pending').length;
+            // Billboard owners see net earnings after VAT and commission
             const earnings = bookingsRes.data
                 .filter(b => ['paid', 'active'].includes(b.booking_status))
-                .reduce((acc, curr) => acc + parseFloat(curr.price_calculated || 0), 0);
+                .reduce((acc, curr) => acc + parseFloat(curr.owner_payout_amount || 0), 0);
 
             // Ads running today — paid/active bookings whose date range covers today
             const today = new Date();
@@ -333,11 +334,12 @@ const OwnerDashboard = () => {
                 value: bStatuses[key]
             }));
 
-            // Revenue By Billboard
+            // Revenue By Billboard - Show net earnings after VAT and commission
+            // Only include paid/active bookings (exclude approved and payment_failed)
             const bbRevenue = bookingsRes.data.reduce((acc, curr) => {
-                if (['approved', 'paid', 'active'].includes(curr.booking_status)) {
+                if (['paid', 'active'].includes(curr.booking_status)) {
                     const bbName = curr.billboard_details?.title || 'Billboard #' + curr.billboard;
-                    acc[bbName] = (acc[bbName] || 0) + parseFloat(curr.price_calculated || 0);
+                    acc[bbName] = (acc[bbName] || 0) + parseFloat(curr.owner_payout_amount || 0);
                 }
                 return acc;
             }, {});
@@ -380,13 +382,26 @@ const OwnerDashboard = () => {
         const { bookingId, action } = actionModal;
         try {
             await api.patch(`campaigns/bookings/${bookingId}/action/`, { action, remarks: actionRemarks });
-            alert(`Booking ${action.replace('_', ' ')} successfully`);
+            
+            // Show success toast with emojis
+            const actionMessages = {
+                'approve': 'Booking approved successfully! ✅',
+                'reject': 'Booking rejected successfully! 🚫',
+                'request_revision': 'Revision requested successfully! ✏️'
+            };
+            setToast({ show: true, message: actionMessages[action] || `Booking ${action.replace('_', ' ')} successfully`, type: 'success' });
+            setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+            
             setActionModal({ show: false, bookingId: null, action: null, title: '' });
             setActionRemarks('');
             fetchData(); // Refresh data
         } catch (error) {
             console.error(`Failed to ${action} booking`, error);
-            alert(`Failed to ${action} booking: ` + (error.response?.data?.detail || 'Unknown error'));
+            
+            // Show error toast
+            const errorMessage = error.response?.data?.error || error.response?.data?.detail || 'Unknown error';
+            setToast({ show: true, message: `Failed to ${action.replace('_', ' ')} booking: ${errorMessage}`, type: 'error' });
+            setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
         }
     };
 
@@ -618,19 +633,21 @@ const OwnerDashboard = () => {
                         background: toast.type === 'success' ? '#10B981' : '#EF4444',
                         color: 'white',
                         padding: '16px 24px',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                        zIndex: 9999,
+                        borderRadius: '16px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '12px',
+                        zIndex: 9999,
                         fontWeight: '600',
+                        fontSize: '14px',
+                        fontFamily: 'Inter, sans-serif',
                         animation: 'slideInRight 0.3s ease-out'
                     }}>
                         {toast.type === 'success' ? (
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         ) : (
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                         )}
                         {toast.message}
                     </div>
@@ -1194,7 +1211,7 @@ const BookingRequests = ({ ownerBookings, openActionModal, navigate }) => {
                                     <div style={{ fontSize: '14px', color: '#374151' }}>{booking.start_date}</div>
                                     <div style={{ fontSize: '12px', color: '#9CA3AF' }}>to {booking.end_date}</div>
                                 </td>
-                                <td style={{ padding: '16px 20px', fontWeight: '700', color: '#111827' }}>NRs. {parseFloat(booking.price_calculated).toLocaleString()}</td>
+                                <td style={{ padding: '16px 20px', fontWeight: '700', color: '#111827' }}>NRs. {parseFloat(booking.owner_payout_amount || 0).toLocaleString()}</td>
                                 <td style={{ padding: '16px 20px' }}>
                                     <span style={{
                                         padding: '4px 12px',

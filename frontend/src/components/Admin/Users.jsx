@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import Pagination from '../Pagination';
 
 const AdminUsers = () => {
     const [users, setUsers] = useState([]);
@@ -11,6 +12,10 @@ const AdminUsers = () => {
     const [appealModal, setAppealModal] = useState({ show: false, appealId: null, status: '', note: '' });
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const [historyModal, setHistoryModal] = useState({ show: false, userId: null });
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const navigate = useNavigate();
 
@@ -88,6 +93,13 @@ const AdminUsers = () => {
             showToast("Failed to respond to appeal.", 'error');
         }
     };
+
+    // Pagination logic for users - must be before conditional returns
+    const totalPages = Math.ceil(users.length / itemsPerPage);
+    const paginatedUsers = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return users.slice(startIndex, startIndex + itemsPerPage);
+    }, [users, currentPage, itemsPerPage]);
 
     if (loading) return <div>Loading...</div>;
 
@@ -188,8 +200,8 @@ const AdminUsers = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {users.length > 0 ? (
-                            users.map(u => (
+                        {paginatedUsers.length > 0 ? (
+                            paginatedUsers.map(u => (
                                 <tr key={u.id}>
                                     <td style={{ paddingLeft: '24px' }}>
                                         <div style={{ fontWeight: '600', color: 'var(--admin-text-dark)' }}>{u.name}</div>
@@ -258,6 +270,17 @@ const AdminUsers = () => {
                         )}
                     </tbody>
                 </table>
+                )}
+
+                {/* Pagination for Users Tab */}
+                {activeTab === 'users' && users.length > 0 && (
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                        itemsPerPage={itemsPerPage}
+                        totalItems={users.length}
+                    />
                 )}
 
                 {/* Appeals Tab */}

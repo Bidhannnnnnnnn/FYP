@@ -21,6 +21,11 @@ const ResetPassword = () => {
     const [passwordError, setPasswordError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    
+    // Loading states for buttons
+    const [isSendingOTP, setIsSendingOTP] = useState(false);
+    const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
 
     // Toast notifications
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -88,6 +93,11 @@ const ResetPassword = () => {
 
     const handleSendOTP = async (e) => {
         if (e) e.preventDefault();
+        
+        // Prevent multiple submissions
+        if (isSendingOTP) return;
+        
+        setIsSendingOTP(true);
         try {
             await api.post('user/SendPasswordResetEmail/', { email });
             setStep(2);
@@ -100,6 +110,8 @@ const ResetPassword = () => {
         } catch (error) {
             console.error(error);
             showToast('Failed to send OTP. Please check your email and try again.', 'error');
+        } finally {
+            setIsSendingOTP(false);
         }
     };
 
@@ -107,12 +119,19 @@ const ResetPassword = () => {
         e.preventDefault();
         const finalOtp = otp.join('');
         if (finalOtp.length !== 6) return;
+        
+        // Prevent multiple submissions
+        if (isVerifyingOTP) return;
+        
+        setIsVerifyingOTP(true);
         try {
             await api.post('user/verify-otp/', { email, otp: finalOtp });
             setStep(3); // OTP Verified, move to password reset
         } catch (error) {
             console.error(error);
             showToast('OTP Verification Failed. Please check the code and try again.', 'error');
+        } finally {
+            setIsVerifyingOTP(false);
         }
     };
 
@@ -123,6 +142,11 @@ const ResetPassword = () => {
             showToast('Passwords do not match!', 'error');
             return;
         }
+        
+        // Prevent multiple submissions
+        if (isResettingPassword) return;
+        
+        setIsResettingPassword(true);
         try {
             await api.post(`user/reset-password/`, { email, otp: finalOtp, password, password2: confirmPassword });
             showToast('Password reset successfully! Redirecting to login...', 'success');
@@ -130,6 +154,7 @@ const ResetPassword = () => {
         } catch (error) {
             console.error('Password Reset Failed:', error);
             showToast('Failed to reset password. OTP may have expired.', 'error');
+            setIsResettingPassword(false);
         }
     };
 
@@ -158,9 +183,19 @@ const ResetPassword = () => {
                                     required
                                 />
                             </div>
-                            <button type="submit" className="login-btn full-width" disabled={!email}>
-                                <span>Send OTP Code</span>
+                            <button type="submit" className="login-btn full-width" disabled={!email || isSendingOTP}>
+                                {isSendingOTP ? (
+                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                        </svg>
+                                        Sending OTP...
+                                    </span>
+                                ) : (
+                                    <span>Send OTP Code</span>
+                                )}
                             </button>
+                            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
                             <button type="button" onClick={() => navigate('/login')} style={{ background:'none', border:'none', color:'#4B5563', marginTop: '15px', cursor:'pointer' }}>Back to Login</button>
                         </form>
                     )}
@@ -199,13 +234,43 @@ const ResetPassword = () => {
                                 </div>
                             </div>
 
-                            <button type="submit" className="login-btn full-width" disabled={otp.join('').length !== 6}>
-                                <span>Verify OTP</span>
+                            <button type="submit" className="login-btn full-width" disabled={otp.join('').length !== 6 || isVerifyingOTP}>
+                                {isVerifyingOTP ? (
+                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                        </svg>
+                                        Verifying...
+                                    </span>
+                                ) : (
+                                    <span>Verify OTP</span>
+                                )}
                             </button>
 
                             <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                                 {canResend ? (
-                                    <button type="button" onClick={handleSendOTP} style={{ background:'none', border:'none', color:'#2563EB', cursor:'pointer', fontWeight:'bold' }}>Resend OTP</button>
+                                    <button 
+                                        type="button" 
+                                        onClick={handleSendOTP} 
+                                        disabled={isSendingOTP}
+                                        style={{ 
+                                            background:'none', 
+                                            border:'none', 
+                                            color: isSendingOTP ? '#9CA3AF' : '#2563EB', 
+                                            cursor: isSendingOTP ? 'not-allowed' : 'pointer', 
+                                            fontWeight:'bold',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px'
+                                        }}
+                                    >
+                                        {isSendingOTP && (
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                            </svg>
+                                        )}
+                                        {isSendingOTP ? 'Sending...' : 'Resend OTP'}
+                                    </button>
                                 ) : (
                                     <p style={{ fontSize: '14px', color: '#6B7280', margin: 0 }}>Resend code in <span style={{ fontWeight:'bold', color: '#374151' }}>{formatTime()}</span></p>
                                 )}
@@ -285,10 +350,19 @@ const ResetPassword = () => {
                             <button 
                                 type="submit" 
                                 className="login-btn full-width"
-                                disabled={!password || !confirmPassword || !validatePassword(password) || password !== confirmPassword}
+                                disabled={!password || !confirmPassword || !validatePassword(password) || password !== confirmPassword || isResettingPassword}
                                 title={(!password || !confirmPassword || !validatePassword(password) || password !== confirmPassword) ? 'Please resolve the password errors above' : ''}
                             >
-                                <span>Reset Password</span>
+                                {isResettingPassword ? (
+                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                        </svg>
+                                        Resetting Password...
+                                    </span>
+                                ) : (
+                                    <span>Reset Password</span>
+                                )}
                             </button>
                         </form>
                     )}

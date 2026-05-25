@@ -304,7 +304,7 @@ const BillboardBooking = () => {
             setTimeout(() => navigate('/advertiser/my-bookings'), 1800);
         } catch (error) {
             console.error("Booking failed", error);
-            // Change 1 — Smart conflict handling
+            // Smart conflict handling
             if (error.response?.data?.slots) {
                 const conflictedSlots = error.response.data.slots;
                 setSelectedSlots(prev => {
@@ -433,19 +433,27 @@ const BillboardBooking = () => {
                     {/* Step 1: Global Config Cards */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '24px' }}>
                         <div style={{ background: '#fff', padding: '24px', borderRadius: '24px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>Campaign Window</label>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>Select Dates</label>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <input
                                     type="date"
                                     min={(() => { const d = new Date(); d.setDate(d.getDate() + (billboard?.booking_lead_days ?? 2)); return d.toISOString().split('T')[0]; })()}
                                     value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
+                                    onChange={(e) => {
+                                        const newStart = e.target.value;
+                                        setStartDate(newStart);
+                                        // Clear end date if it's no longer after the new start
+                                        if (endDate && endDate <= newStart) setEndDate('');
+                                    }}
                                     style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid #E5E7EB', fontSize: '14px', fontFamily: 'Inter, sans-serif', fontWeight: '600' }}
                                 />
                                 <span style={{ color: '#D1D5DB' }}>→</span>
                                 <input
                                     type="date"
-                                    min={startDate || new Date().toISOString().split('T')[0]}
+                                    min={startDate 
+                                        ? (() => { const d = new Date(startDate); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })()
+                                        : new Date().toISOString().split('T')[0]
+                                    }
                                     value={endDate}
                                     onChange={(e) => setEndDate(e.target.value)}
                                     style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid #E5E7EB', fontSize: '14px', fontFamily: 'Inter, sans-serif', fontWeight: '600' }}
@@ -602,7 +610,7 @@ const BillboardBooking = () => {
                     {/* Step 3: Creative Asset */}
                     <div style={{ background: '#fff', borderRadius: '32px', padding: '32px', border: '1.5px solid #F3F4F6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
                         <h3 style={{ fontSize: '20px', fontWeight: '800', fontFamily: 'Outfit, sans-serif', color: '#111827', marginBottom: '8px' }}>Campaign Creative</h3>
-                        <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '24px' }}>Provide the visual asset for this placement. High-resolution mp4 or jpg preferred.</p>
+                        <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '24px' }}>Provide the visual asset for this placement. If Your video aspect ratio doesnot comply with billboard dimensions, it will be automatically cropped .</p>
 
                         <div style={{ background: '#F9FAFB', padding: '32px', borderRadius: '24px', border: '2px dashed #E5E7EB', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                             <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>

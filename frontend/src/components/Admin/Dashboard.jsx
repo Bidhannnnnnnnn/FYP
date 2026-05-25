@@ -139,8 +139,8 @@ const AdminDashboard = () => {
     };
 
     const [stats, setStats] = useState({
+        totalRevenue: 0,
         totalUsers: 0,
-        pendingBillboards: 0,
         approvedBillboards: 0
     });
     const [chartData, setChartData] = useState({
@@ -177,9 +177,14 @@ const AdminDashboard = () => {
         const { users, billboards, bookings } = rawData;
         if (!users.length && !billboards.length && !bookings.length) return;
 
+        // Calculate total platform revenue (5% commission from all paid/active bookings)
+        const totalRevenue = bookings
+            .filter(b => ['paid', 'active'].includes(b.booking_status))
+            .reduce((sum, b) => sum + parseFloat(b.platform_commission || 0), 0);
+
         setStats({
+            totalRevenue: totalRevenue,
             totalUsers: users.length,
-            pendingBillboards: billboards.filter(b => b.status === 'pending').length,
             approvedBillboards: billboards.filter(b => b.status === 'approved').length,
         });
 
@@ -277,7 +282,8 @@ const AdminDashboard = () => {
             if (['approved', 'active', 'paid'].includes(b.booking_status) && b.created_at) {
                 try {
                     const bDate = new Date(b.created_at);
-                    const price = parseFloat(b.price_calculated) || 0;
+                    // Superadmin sees only 5% platform commission
+                    const price = parseFloat(b.platform_commission) || 0;
                     const bucket = revenueData.find(d => bDate >= d._start && bDate < d._end);
                     if (bucket) bucket.Revenue += price;
                 } catch (e) {}
@@ -342,16 +348,16 @@ const AdminDashboard = () => {
             </div>
 
             <div className="stats-row">
-                <div className="stat-card primary-stat" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
+                <div className="stat-card primary-stat" style={{ cursor: 'default' }}>
+                    <div className="stat-content">
+                        <span className="stat-label">Total Platform Revenue</span>
+                        <div className="stat-value" style={{ fontSize: '32px' }}>NRs. {stats.totalRevenue.toLocaleString()}</div>
+                    </div>
+                </div>
+                <div className="stat-card" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
                     <div className="stat-content">
                         <span className="stat-label">Total Users</span>
                         <div className="stat-value">{stats.totalUsers}</div>
-                    </div>
-                </div>
-                <div className="stat-card" onClick={() => navigate('/admin/billboards')} style={{ cursor: 'pointer' }}>
-                    <div className="stat-content">
-                        <span className="stat-label">Pending Billboards</span>
-                        <div className="stat-value">{stats.pendingBillboards}</div>
                     </div>
                 </div>
                 <div className="stat-card" onClick={() => navigate('/admin/billboards')} style={{ cursor: 'pointer' }}>

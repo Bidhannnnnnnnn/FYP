@@ -24,6 +24,8 @@ import AddBillboard from './pages/AddBillboard';
 import AdminBillboardDetail from './components/Admin/AdminBillboardDetail';
 import Banned from './pages/Banned';
 import About from './pages/About';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentFailure from './pages/PaymentFailure';
 
 function App() {
   return (
@@ -38,6 +40,8 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/banned" element={<Banned />} />
         <Route path="/about" element={<About />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/failure" element={<PaymentFailure />} />
 
         {/* Owner Portal */}
         <Route path="/owner" element={<DashboardWrapper />} />

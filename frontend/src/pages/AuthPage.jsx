@@ -118,10 +118,31 @@ const AuthPage = () => {
             setSignupStep(4); // Move to success/verify step
         } catch (error) {
             console.error('Registration Failed:', error);
-            const errorMsg = error.response?.data?.errors?.non_field_errors?.[0] ||
-                error.response?.data?.email?.[0] ||
-                error.response?.data?.password?.[0] ||
-                'Registration failed. Please try again.';
+            
+            // Extract all error messages from the response
+            let errorMsg = 'Registration failed. Please try again.';
+            
+            if (error.response?.data?.errors) {
+                const errors = error.response.data.errors;
+                const errorMessages = [];
+                
+                // Collect all error messages from all fields
+                Object.keys(errors).forEach(field => {
+                    if (Array.isArray(errors[field])) {
+                        errors[field].forEach(msg => {
+                            // Capitalize field name for better display
+                            const fieldName = field === 'non_field_errors' ? '' : 
+                                            field.charAt(0).toUpperCase() + field.slice(1) + ': ';
+                            errorMessages.push(fieldName + msg);
+                        });
+                    }
+                });
+                
+                if (errorMessages.length > 0) {
+                    errorMsg = errorMessages.join(' | ');
+                }
+            }
+            
             setSignupError(errorMsg);
         } finally {
             setIsSubmitting(false);

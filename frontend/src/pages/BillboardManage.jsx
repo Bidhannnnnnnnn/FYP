@@ -68,9 +68,11 @@ const BillboardManage = () => {
 
 
     // Derived Stats
-    const activeBookings = useMemo(() => bookings.filter(b => ['approved', 'active', 'paid'].includes(b.booking_status)), [bookings]);
+    // Only count paid/active bookings as revenue (exclude approved and payment_failed)
+    const activeBookings = useMemo(() => bookings.filter(b => ['active', 'paid'].includes(b.booking_status)), [bookings]);
     const pendingBookings = useMemo(() => bookings.filter(b => b.booking_status === 'pending'), [bookings]);
-    const totalRevenue = useMemo(() => activeBookings.reduce((sum, b) => sum + parseFloat(b.price_calculated || 0), 0), [activeBookings]);
+    // Billboard owners see net earnings after VAT and commission
+    const totalRevenue = useMemo(() => activeBookings.reduce((sum, b) => sum + parseFloat(b.owner_payout_amount || 0), 0), [activeBookings]);
 
     // Processed Bookings (All Bookings with search/filter/sort)
     const processedBookings = useMemo(() => {
@@ -455,7 +457,7 @@ const BillboardManage = () => {
                                     {/* Amount + Status */}
                                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                         <div style={{ fontSize: '16px', fontWeight: '800', color: '#111827', fontFamily: 'Outfit, sans-serif', marginBottom: '6px' }}>
-                                            NRs. {parseFloat(b.price_calculated).toLocaleString()}
+                                            NRs. {parseFloat(b.owner_payout_amount || 0).toLocaleString()}
                                         </div>
                                         <span style={{ fontSize: '11px', background: statusStyle.bg, color: statusStyle.color, padding: '3px 10px', borderRadius: '100px', fontWeight: '700', textTransform: 'uppercase' }}>
                                             {b.booking_status.replace('_', ' ')}

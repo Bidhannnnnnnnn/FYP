@@ -18,6 +18,7 @@ import requests
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 from account.models import User, Notification, BanAppeal
+from account import email_service
 
 User = get_user_model()
 
@@ -197,13 +198,15 @@ class GoogleLoginView(APIView):
                 # Return 404 so UI can auto-fill signup form
                 return Response({'errors': {'token': ['Account does not exist. Please sign up first.']}, 'email': email, 'name': name}, status=status.HTTP_404_NOT_FOUND)
 
-            # Generate tokens
+            # Generate tokens - Allow suspended users to login (same as regular login)
             token = get_tokens_for_user(user)
             return Response({
                 'token': token,
                 'msg': 'Login Successful',
                 'role': user.role,
-                'name': user.name
+                'name': user.name,
+                'is_active': user.is_active,
+                'ban_reason': user.ban_reason
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -261,6 +264,7 @@ class UserBanView(APIView):
                 notification_type='system',
                 message=f"Account Suspended: Your account has been suspended by an Admin. Reason: {ban_reason}"
             )
+            email_service.send_ban_notification(user, ban_reason)
             
             return Response({'status': 'User banned successfully'})
         except User.DoesNotExist:
@@ -283,6 +287,7 @@ class UserUnbanView(APIView):
                 notification_type='system',
                 message="Account Restored: Your account suspension has been lifted by an Admin. Welcome back!"
             )
+            email_service.send_unban_notification(user)
             
             return Response({'status': 'User unbanned successfully'})
         except User.DoesNotExist:
@@ -353,6 +358,7 @@ class UserAppealView(APIView):
                 notification_type='system',
                 message=f"New Ban Appeal: User {user.name} ({user.email}) has appealed their suspension."
             )
+        email_service.send_appeal_submitted_to_superadmins(appeal, list(superadmins))
             
         serializer = BanAppealSerializer(appeal)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -390,12 +396,14 @@ class AdminAppealManageView(APIView):
                     notification_type='system',
                     message=f"Appeal Approved. {admin_response or 'Your account has been reinstated.'}"
                 )
+                email_service.send_appeal_approved_to_user(appeal)
             elif new_status == 'rejected':
                 Notification.objects.create(
                     recipient=appeal.user,
                     notification_type='system',
                     message=f"Appeal Rejected. {admin_response or ''}"
                 )
+                email_service.send_appeal_rejected_to_user(appeal)
                 
             serializer = BanAppealSerializer(appeal)
             return Response(serializer.data, status=status.HTTP_200_OK)

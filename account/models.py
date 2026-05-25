@@ -65,6 +65,7 @@ class User(AbstractBaseUser):
     ban_reason = models.TextField(null=True, blank=True)
     unban_request_message = models.TextField(null=True, blank=True)
     is_admin = models.BooleanField(default=False)
+    email_notifications_enabled = models.BooleanField(default=True, help_text="Receive email notifications for bookings, billboards, and account events")
     created_at= models.DateTimeField(auto_now_add=True)
     updated_at= models.DateTimeField(auto_now=True)
     

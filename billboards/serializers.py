@@ -22,6 +22,16 @@ class BillboardCreateSerializer(serializers.ModelSerializer):
             'documents'
         ]
 
+    def validate_image(self, value):
+        """Validate billboard image file size (max 10MB)"""
+        if value:
+            max_size = 10 * 1024 * 1024  # 10MB in bytes
+            if value.size > max_size:
+                raise serializers.ValidationError(
+                    f"Image file size cannot exceed 10MB. Your file is {value.size / (1024 * 1024):.2f}MB."
+                )
+        return value
+
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['owner'] = user

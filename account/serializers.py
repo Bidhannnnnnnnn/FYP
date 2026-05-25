@@ -41,7 +41,7 @@ class UserLoginSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields=['id', 'email', 'name', 'role', 'phone_number', 'address', 'company_name', 'bio', 'is_active', 'ban_reason']
+        fields=['id', 'email', 'name', 'role', 'phone_number', 'address', 'company_name', 'bio', 'is_active', 'ban_reason', 'email_notifications_enabled']
         extra_kwargs = {
             'email': {'read_only': True},
             'role': {'read_only': True},

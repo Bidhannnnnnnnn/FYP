@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { Ban, CheckCircle, ClipboardList, Edit2, Flag, Trash2 } from 'lucide-react';
+import Pagination from '../Pagination';
 
 // ─── SVG Icons ─────────────────────────────────────────────────────────────
 const IconEye   = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
@@ -46,6 +47,14 @@ const AdminBookings = () => {
     const [confirm, setConfirm]             = useState(null); // { id, action, label }
     const navigate = useNavigate();
 
+    // Get current user role from localStorage
+    const userRole = localStorage.getItem('role')?.trim().toLowerCase();
+    const isSuperAdmin = userRole === 'superadmin';
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
     useEffect(() => { fetchBookings(); }, []);
 
     const fetchBookings = async () => {
@@ -73,6 +82,13 @@ const AdminBookings = () => {
             setActionLoading(null);
         }
     };
+
+    // Pagination logic - must be before conditional returns
+    const totalPages = Math.ceil(bookings.length / itemsPerPage);
+    const paginatedBookings = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return bookings.slice(startIndex, startIndex + itemsPerPage);
+    }, [bookings, currentPage, itemsPerPage]);
 
     if (loading) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px', color: '#6B7280', fontFamily: 'Inter, sans-serif' }}>
@@ -123,7 +139,7 @@ const AdminBookings = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {bookings.length > 0 ? bookings.map(b => {
+                        {paginatedBookings.length > 0 ? paginatedBookings.map(b => {
                             const isPending = b.booking_status === 'pending';
                             const meta      = STATUS_META[b.booking_status];
                             const isActing  = actionLoading === b.id;
@@ -147,7 +163,7 @@ const AdminBookings = () => {
                                     </td>
                                     <td>
                                         <div style={{ fontWeight: '700', color: 'var(--admin-primary-green)', fontSize: '15px' }}>
-                                            NRs. {Number(b.price_calculated).toLocaleString()}
+                                            NRs. {Number(b.platform_commission || 0).toLocaleString()}
                                         </div>
                                     </td>
                                     <td>
@@ -157,7 +173,7 @@ const AdminBookings = () => {
                                     </td>
                                     <td style={{ paddingRight: '24px', textAlign: 'right' }}>
                                         {isPending ? (
-                                            /* ── PENDING: show all decision buttons ── */
+                                            /* ── PENDING: show all decision buttons for owners, view-only for superadmins ── */
                                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                                                 <Btn
                                                     disabled={isActing}
@@ -166,27 +182,31 @@ const AdminBookings = () => {
                                                 >
                                                     <IconEye /> View Details
                                                 </Btn>
-                                                <Btn
-                                                    disabled={isActing}
-                                                    onClick={() => setConfirm({ id: b.id, action: 'approve', label: 'Approve Booking' })}
-                                                    style={{ background: '#ECFDF5', color: '#065F46', border: '1.5px solid #A7F3D0' }}
-                                                >
-                                                    <IconCheck /> Approve
-                                                </Btn>
-                                                <Btn
-                                                    disabled={isActing}
-                                                    onClick={() => setConfirm({ id: b.id, action: 'request_changes', label: 'Request Revisions' })}
-                                                    style={{ background: '#FFFBEB', color: '#B45309', border: '1.5px solid #FDE68A' }}
-                                                >
-                                                    <IconEdit /> Revise
-                                                </Btn>
-                                                <Btn
-                                                    disabled={isActing}
-                                                    onClick={() => setConfirm({ id: b.id, action: 'reject', label: 'Reject Booking' })}
-                                                    style={{ background: '#FEF2F2', color: '#991B1B', border: '1.5px solid #FECACA' }}
-                                                >
-                                                    <IconX /> Reject
-                                                </Btn>
+                                                {!isSuperAdmin && (
+                                                    <>
+                                                        <Btn
+                                                            disabled={isActing}
+                                                            onClick={() => setConfirm({ id: b.id, action: 'approve', label: 'Approve Booking' })}
+                                                            style={{ background: '#ECFDF5', color: '#065F46', border: '1.5px solid #A7F3D0' }}
+                                                        >
+                                                            <IconCheck /> Approve
+                                                        </Btn>
+                                                        <Btn
+                                                            disabled={isActing}
+                                                            onClick={() => setConfirm({ id: b.id, action: 'request_changes', label: 'Request Revisions' })}
+                                                            style={{ background: '#FFFBEB', color: '#B45309', border: '1.5px solid #FDE68A' }}
+                                                        >
+                                                            <IconEdit /> Revise
+                                                        </Btn>
+                                                        <Btn
+                                                            disabled={isActing}
+                                                            onClick={() => setConfirm({ id: b.id, action: 'reject', label: 'Reject Booking' })}
+                                                            style={{ background: '#FEF2F2', color: '#991B1B', border: '1.5px solid #FECACA' }}
+                                                        >
+                                                            <IconX /> Reject
+                                                        </Btn>
+                                                    </>
+                                                )}
                                             </div>
                                         ) : (
                                             /* ── RESOLVED: view + contextual status chip ── */
@@ -231,6 +251,17 @@ const AdminBookings = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination */}
+            {bookings.length > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={bookings.length}
+                />
+            )}
 
             {/* ── Confirm Modal ── */}
             {confirm && (

@@ -33,7 +33,7 @@ const BillboardPlayer = () => {
         };
         fetchData();
 
-        // Refresh ad list every 5 minutes to catch new approvals
+        // Refresh ad list every 3 seconds "3000" ms to catch new approvals
         const interval = setInterval(fetchData, 3000);
         return () => clearInterval(interval);
     }, [id]);
@@ -183,7 +183,7 @@ const FallbackScreen = ({ billboard }) => (
             fontWeight: 'bold',
             color: '#667B68'
         }}>
-            SCAN TO PLACE AN AD
+            JOIN BIMBASETU TO PLACE YOUR AD
         </div>
         <div style={{ position: 'absolute', bottom: '40px', fontSize: '18px', opacity: 0.5 }}>
             BimbaSetu Digital Signage Network
